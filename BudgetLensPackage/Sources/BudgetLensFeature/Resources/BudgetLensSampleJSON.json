@@ -1,0 +1,103 @@
+{
+  "success": true,
+  "data": {
+    "period": "2025-05",
+    "totalBudgetedCents": 450000,
+    "totalSpentCents": 396800,
+    "totalIncomeCents": 580000,
+    "unallocatedBudgetCents": 41200,
+    "unbudgetedSpentCents": 18500,
+    "spentPercentage": 88.2,
+    "remainingPercentage": 11.8,
+    "categoryCount": 7,
+    "overBudgetCategoryCount": 2,
+    "categories": [
+      {
+        "categoryId": "a1b2c3d4-0001-4000-b000-000000000001",
+        "categoryName": "Housing",
+        "categoryIcon": "house",
+        "categoryType": "essential",
+        "budgetedCents": 150000,
+        "spentCents": 150000,
+        "remainingCents": 0,
+        "allocationPercentage": 33.3,
+        "spentPercentage": 100.0,
+        "isOverBudget": false
+      },
+      {
+        "categoryId": "a1b2c3d4-0002-4000-b000-000000000002",
+        "categoryName": "Groceries",
+        "categoryIcon": "cart",
+        "categoryType": "essential",
+        "budgetedCents": 60000,
+        "spentCents": 71400,
+        "remainingCents": -11400,
+        "allocationPercentage": 13.3,
+        "spentPercentage": 119.0,
+        "isOverBudget": true
+      },
+      {
+        "categoryId": "a1b2c3d4-0003-4000-b000-000000000003",
+        "categoryName": "Transportation",
+        "categoryIcon": "car",
+        "categoryType": "essential",
+        "budgetedCents": 45000,
+        "spentCents": 38200,
+        "remainingCents": 6800,
+        "allocationPercentage": 10.0,
+        "spentPercentage": 84.9,
+        "isOverBudget": false
+      },
+      {
+        "categoryId": "a1b2c3d4-0004-4000-b000-000000000004",
+        "categoryName": "Dining Out",
+        "categoryIcon": "fork.knife",
+        "categoryType": "discretionary",
+        "budgetedCents": 40000,
+        "spentCents": 53700,
+        "remainingCents": -13700,
+        "allocationPercentage": 8.9,
+        "spentPercentage": 134.3,
+        "isOverBudget": true
+      },
+      {
+        "categoryId": "a1b2c3d4-0005-4000-b000-000000000005",
+        "categoryName": "Subscriptions",
+        "categoryIcon": "repeat",
+        "categoryType": "discretionary",
+        "budgetedCents": 25000,
+        "spentCents": 22100,
+        "remainingCents": 2900,
+        "allocationPercentage": 5.6,
+        "spentPercentage": 88.4,
+        "isOverBudget": false
+      },
+      {
+        "categoryId": "a1b2c3d4-0006-4000-b000-000000000006",
+        "categoryName": "Health & Wellness",
+        "categoryIcon": "heart",
+        "categoryType": "essential",
+        "budgetedCents": 30000,
+        "spentCents": 19600,
+        "remainingCents": 10400,
+        "allocationPercentage": 6.7,
+        "spentPercentage": 65.3,
+        "isOverBudget": false
+      },
+      {
+        "categoryId": "a1b2c3d4-0007-4000-b000-000000000007",
+        "categoryName": "Savings",
+        "categoryIcon": "banknote",
+        "categoryType": "savings",
+        "budgetedCents": 100000,
+        "spentCents": 41800,
+        "remainingCents": 58200,
+        "allocationPercentage": 22.2,
+        "spentPercentage": 41.8,
+        "isOverBudget": false
+      }
+    ]
+  },
+  "error": null,
+  "timestamp": "2025-05-28T14:32:00Z"
+}
