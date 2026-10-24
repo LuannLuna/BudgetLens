@@ -23,13 +23,6 @@ struct CustomProviderEditorSheet: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityIdentifier("customModelField")
-                    Button(String(localized: "Add assistant", comment: "Create the custom assistant"), systemImage: "plus") { save() }
-                        .disabled(
-                            name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        )
-                        .accessibilityIdentifier("customSaveButton")
                 } footer: {
                     Text("The endpoint must accept OpenAI-style chat completions at /chat/completions.", comment: "Custom assistant endpoint requirement")
                 }
@@ -38,13 +31,25 @@ struct CustomProviderEditorSheet: View {
                     Section { FailureNoticeView(failure: failure) }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(Text("Custom assistant", comment: "Custom assistant editor title"))
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button(String(localized: "Cancel", comment: "Close the custom assistant editor"), systemImage: "xmark") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(String(localized: "Add", comment: "Create the custom assistant"), systemImage: "plus") { save() }
+                        .disabled(canSave == false)
+                        .accessibilityIdentifier("customSaveButton")
                 }
             }
         }
+    }
+
+    private var canSave: Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            && baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            && model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
     }
 
     private func save() {

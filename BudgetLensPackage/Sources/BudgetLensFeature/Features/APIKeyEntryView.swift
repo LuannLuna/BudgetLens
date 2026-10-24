@@ -1,10 +1,13 @@
 import SwiftUI
 
 struct APIKeyEntryView: View {
+    private static let customOptionID = "__custom_assistant__"
+
     let access: BudgetAccessState
     @State private var selectedProviderID: String
     @State private var draft = ""
     @State private var failure: ExperienceFailure?
+    @State private var showingCustomEditor = false
 
     init(access: BudgetAccessState) {
         self.access = access
@@ -19,8 +22,15 @@ struct APIKeyEntryView: View {
                         ForEach(access.providers) { provider in
                             Text(verbatim: provider.name).tag(provider.id)
                         }
+                        Text("Custom assistant…", comment: "Option to add a custom OpenAI-compatible assistant")
+                            .tag(Self.customOptionID)
                     }
                     .accessibilityIdentifier("providerPicker")
+                    .onChange(of: selectedProviderID) { oldValue, newValue in
+                        guard newValue == Self.customOptionID else { return }
+                        selectedProviderID = oldValue
+                        showingCustomEditor = true
+                    }
                     SecureField(String(localized: "API key", comment: "Secure key entry field label"), text: $draft)
                         .textContentType(.password)
                         .textInputAutocapitalization(.never)
@@ -38,10 +48,16 @@ struct APIKeyEntryView: View {
                 } header: {
                     Text("Connect your AI assistant", comment: "First-launch key entry heading")
                 } footer: {
-                    Text("Continue stores the key in this device's Keychain and opens your budget as \(selectedProviderName). No request is sent yet: \(selectedProviderName) checks the key when you ask your first question. Asking a question shares the relevant historical budget snapshot with \(selectedProviderName).", comment: "Key storage, no-API-call clarification, and third-party data disclosure")
+                    Text("Continue stores the key in this device's Keychain and opens your budget as \(selectedProviderName). No request is sent yet: \(selectedProviderName) checks the key when you ask your first question. Asking a question shares the relevant historical budget snapshot with \(selectedProviderName). Choose Custom assistant… to use any OpenAI-compatible endpoint.", comment: "Key storage, no-API-call clarification, third-party data disclosure, and custom assistant hint")
                 }
             }
             .navigationTitle(Text("Welcome to BudgetLens", comment: "Onboarding title"))
+            .sheet(isPresented: $showingCustomEditor) {
+                CustomProviderEditorSheet { name, baseURL, model in
+                    let provider = try access.addCustomProvider(name: name, baseURL: baseURL, model: model)
+                    selectedProviderID = provider.id
+                }
+            }
         }
     }
 

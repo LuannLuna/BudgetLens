@@ -120,9 +120,11 @@ final class BudgetAccessState {
         }
     }
 
-    func addCustomProvider(name: String, baseURL: String, model: String) throws {
-        _ = try experience.addCustomProvider(name: name, baseURL: baseURL, model: model)
+    @discardableResult
+    func addCustomProvider(name: String, baseURL: String, model: String) throws -> Provider {
+        let provider = try experience.addCustomProvider(name: name, baseURL: baseURL, model: model)
         refreshCatalog()
+        return provider
     }
 
     func removeCustomProvider(id: String) throws {

@@ -85,8 +85,9 @@ struct BudgetAccessStateTests {
     @Test func addingCustomProviderAppearsInCatalog() throws {
         let (access, _, _) = makeAccess()
         access.prepare()
-        try access.addCustomProvider(name: "Local", baseURL: "https://example.com", model: "m1")
-        #expect(access.providers.contains { $0.id.hasPrefix("custom-") })
+        let provider = try access.addCustomProvider(name: "Local", baseURL: "https://example.com", model: "m1")
+        #expect(provider.isBuiltIn == false)
+        #expect(access.providers.contains(provider))
     }
 
     @Test func connectingSelectedAssistantActivatesItAndConfirms() throws {

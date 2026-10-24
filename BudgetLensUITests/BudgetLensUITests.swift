@@ -61,4 +61,44 @@ final class BudgetLensUITests: XCTestCase {
         app.tabBars.buttons["Ask"].tap()
         XCTAssertTrue(app.staticTexts["Answering with DeepSeek"].waitForExistence(timeout: 3))
     }
+
+    @MainActor
+    func testAddingCustomAssistantOnWelcomeConnectsIt() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing-reset"]
+        app.launch()
+
+        let keyField = app.secureTextFields["apiKeyField"]
+        XCTAssertTrue(keyField.waitForExistence(timeout: 5))
+
+        app.buttons["providerPicker"].tap()
+        let customOption = app.buttons["Custom assistant…"]
+        XCTAssertTrue(customOption.waitForExistence(timeout: 3))
+        customOption.tap()
+
+        let nameField = app.textFields["customNameField"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 3))
+        nameField.tap()
+        nameField.typeText("Local Test")
+        let urlField = app.textFields["customURLField"]
+        urlField.tap()
+        urlField.typeText("https://example.com/v1")
+        let modelField = app.textFields["customModelField"]
+        modelField.tap()
+        modelField.typeText("test-model")
+        app.buttons["customSaveButton"].tap()
+
+        let picker = app.buttons["providerPicker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 3))
+        XCTAssertTrue(picker.label.contains("Local Test"))
+
+        keyField.tap()
+        keyField.typeText("test-only-custom-key")
+        app.buttons["continueButton"].tap()
+
+        XCTAssertTrue(app.tabBars.buttons["Budget"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["connectionBanner"].waitForExistence(timeout: 3))
+        app.tabBars.buttons["Ask"].tap()
+        XCTAssertTrue(app.staticTexts["Answering with Local Test"].waitForExistence(timeout: 3))
+    }
 }
