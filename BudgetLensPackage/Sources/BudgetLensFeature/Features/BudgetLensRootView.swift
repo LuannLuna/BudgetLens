@@ -13,8 +13,9 @@ public struct BudgetLensRootView: View {
                 ProgressView {
                     Text("Opening your snapshot", comment: "Loading the local budget snapshot")
                 }
-            case .needsKey:
+            case .needsKey(_, let providerID):
                 APIKeyEntryView(access: access)
+                    .id(providerID)
             case .ready(let snapshot):
                 MainExperienceView(snapshot: snapshot, access: access)
             case .failure(let failure):
@@ -27,6 +28,13 @@ public struct BudgetLensRootView: View {
                 }
             }
         }
-        .task { access.prepare() }
+        .task {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-testing-reset") {
+                access.resetForAutomatedTests()
+            }
+            #endif
+            access.prepare()
+        }
     }
 }

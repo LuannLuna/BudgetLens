@@ -7,7 +7,9 @@ struct ChatConversationStateTests {
         let responder = FlakyResponder()
         let experience = BudgetExperience(
             keyStore: ChatTestKeyStore(),
-            client: responder,
+            clientResolver: ChatTestResolver(responder: responder),
+            activeProviderStore: ChatTestActiveStore(),
+            customProviderStore: ChatTestCustomStore(),
             reporter: ChatTestReporter()
         )
         let conversation = ChatConversationState(experience: experience)
@@ -23,6 +25,7 @@ struct ChatConversationStateTests {
         #expect(conversation.messages.count == 2)
         #expect(conversation.messages[0].role == .user)
         #expect(conversation.messages[1].role == .assistant)
+        #expect(conversation.messages[1].providerID == "openai")
         #expect(await responder.requestCount == 2)
     }
 }
@@ -38,9 +41,25 @@ private actor FlakyResponder: LLMResponding {
 }
 
 private struct ChatTestKeyStore: APIKeyStoring {
-    func read() throws -> String? { "test-only" }
-    func save(_ key: String) throws {}
-    func clear() throws {}
+    func read(providerID: String) throws -> String? { "test-only" }
+    func save(_ key: String, providerID: String) throws {}
+    func clear(providerID: String) throws {}
+    func migrateLegacyOpenAIKeyIfNeeded() throws {}
+}
+
+private final class ChatTestActiveStore: ActiveProviderStoring {
+    func activeProviderID() -> String { "openai" }
+    func setActiveProviderID(_ id: String) {}
+}
+
+private struct ChatTestCustomStore: CustomProviderStoring {
+    func load() -> [Provider] { [] }
+    func save(_ providers: [Provider]) throws {}
+}
+
+private struct ChatTestResolver: LLMClientResolving {
+    let responder: any LLMResponding
+    func client(for provider: Provider) -> any LLMResponding { responder }
 }
 
 private struct ChatTestReporter: ErrorReporting {

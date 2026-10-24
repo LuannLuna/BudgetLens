@@ -2,11 +2,15 @@ import SwiftUI
 
 struct ChatMessageRow: View {
     let message: ChatMessage
+    let providerName: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: LayoutSpace.small) {
             if message.role == .user {
                 Text("You", comment: "Chat message sender: the user")
+                    .font(.caption.bold())
+            } else if let providerName {
+                Text("BudgetLens · \(providerName)", comment: "Chat message sender with assistant provider name")
                     .font(.caption.bold())
             } else {
                 Text("BudgetLens", comment: "Chat message sender: the assistant")

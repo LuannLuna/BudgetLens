@@ -5,17 +5,13 @@ import Testing
 @MainActor
 struct BudgetExperienceTests {
     @Test(arguments: [
-        (ProviderFailure.invalidKey, ExperienceFailure.invalidKey),
+        (ProviderFailure.invalidKey, ExperienceFailure.invalidKey(providerName: "OpenAI")),
         (ProviderFailure.connection, ExperienceFailure.network),
         (ProviderFailure.unusableReply, ExperienceFailure.unusableReply),
         (ProviderFailure.serviceUnavailable, ExperienceFailure.serviceUnavailable)
     ])
     func providerErrorsMapToRecoverableFailures(_ provider: ProviderFailure, _ expected: ExperienceFailure) async throws {
-        let experience = BudgetExperience(
-            keyStore: SampleKeyStore(key: "test-only"),
-            client: SampleResponder(failure: provider),
-            reporter: SilentTestReporter()
-        )
+        let experience = makeExperience(key: "test-only", responder: SampleResponder(failure: provider))
         let snapshot = try experience.loadSnapshot()
         do {
             _ = try await experience.ask("What stands out?", history: [], snapshot: snapshot)
@@ -26,11 +22,7 @@ struct BudgetExperienceTests {
     }
 
     @Test func missingKeyStopsBeforeNetworkRequest() async throws {
-        let experience = BudgetExperience(
-            keyStore: SampleKeyStore(key: nil),
-            client: SampleResponder(failure: .connection),
-            reporter: SilentTestReporter()
-        )
+        let experience = makeExperience(key: nil, responder: SampleResponder(failure: .connection))
         let snapshot = try experience.loadSnapshot()
         do {
             _ = try await experience.ask("Question", history: [], snapshot: snapshot)
@@ -39,19 +31,117 @@ struct BudgetExperienceTests {
             #expect(failure == .missingKey)
         }
     }
+
+    @Test func askUsesTheActiveProvider() async throws {
+        let experience = makeExperience(
+            key: "anthropic-key",
+            responder: SampleResponder(reply: "anthropic-answer"),
+            activeID: "anthropic"
+        )
+        let snapshot = try experience.loadSnapshot()
+        let reply = try await experience.ask("Question", history: [], snapshot: snapshot)
+        #expect(reply == "anthropic-answer")
+    }
+
+    @Test func customProviderLifecycle() throws {
+        let customStore = InMemoryCustomStore()
+        let experience = makeExperience(customStore: customStore)
+        let provider = try experience.addCustomProvider(name: "Local", baseURL: "https://example.com/v1", model: "m1")
+        #expect(provider.kind == .openAICompatible)
+        #expect(provider.isBuiltIn == false)
+        #expect(try experience.providers().count == Provider.catalog.count + 1)
+
+        try experience.removeCustomProvider(id: provider.id)
+        #expect(try experience.providers().count == Provider.catalog.count)
+        #expect(customStore.saved.isEmpty)
+    }
+
+    @Test func invalidCustomProviderDetailsAreRejected() {
+        let experience = makeExperience()
+        do {
+            _ = try experience.addCustomProvider(name: "Local", baseURL: "http://insecure.example.com", model: "m1")
+            Issue.record("Expected a validation failure")
+        } catch let failure as ExperienceFailure {
+            guard case .invalidProviderDetails = failure else {
+                Issue.record("Unexpected failure: \(failure)")
+                return
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(type(of: error))")
+        }
+    }
+
+    @Test func removingActiveCustomProviderFallsBackToOpenAI() throws {
+        let activeStore = InMemoryActiveStore()
+        let experience = makeExperience(activeStore: activeStore)
+        let provider = try experience.addCustomProvider(name: "Local", baseURL: "https://example.com", model: "m1")
+        try experience.setActiveProviderID(provider.id)
+        #expect(activeStore.id == provider.id)
+
+        try experience.removeCustomProvider(id: provider.id)
+        #expect(activeStore.id == Provider.openAI.id)
+    }
+
+    private func makeExperience(
+        key: String? = "test-only",
+        responder: any LLMResponding = SampleResponder(reply: "ok"),
+        activeID: String = "openai",
+        customStore: any CustomProviderStoring = InMemoryCustomStore(),
+        activeStore: InMemoryActiveStore = InMemoryActiveStore()
+    ) -> BudgetExperience {
+        BudgetExperience(
+            keyStore: SampleKeyStore(key: key),
+            clientResolver: SampleResolver(responder: responder),
+            activeProviderStore: activeStore,
+            customProviderStore: customStore,
+            reporter: SilentTestReporter()
+        )
+    }
 }
 
 private struct SampleKeyStore: APIKeyStoring {
     let key: String?
-    func read() throws -> String? { key }
-    func save(_ key: String) throws {}
-    func clear() throws {}
+    func read(providerID: String) throws -> String? { key }
+    func save(_ key: String, providerID: String) throws {}
+    func clear(providerID: String) throws {}
+    func migrateLegacyOpenAIKeyIfNeeded() throws {}
+}
+
+private final class InMemoryActiveStore: ActiveProviderStoring {
+    var id: String
+    init(id: String = "openai") { self.id = id }
+    func activeProviderID() -> String { id }
+    func setActiveProviderID(_ id: String) { self.id = id }
+}
+
+private final class InMemoryCustomStore: CustomProviderStoring {
+    var saved: [Provider] = []
+    func load() -> [Provider] { saved }
+    func save(_ providers: [Provider]) throws { saved = providers }
+}
+
+private struct SampleResolver: LLMClientResolving {
+    let responder: any LLMResponding
+    func client(for provider: Provider) -> any LLMResponding { responder }
 }
 
 private struct SampleResponder: LLMResponding {
-    let failure: ProviderFailure
+    let failure: ProviderFailure?
+    let reply: String
+
+    init(failure: ProviderFailure) {
+        self.failure = failure
+        self.reply = ""
+    }
+
+    init(reply: String) {
+        self.failure = nil
+        self.reply = reply
+    }
+
     func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String {
-        throw failure
+        if let failure { throw failure }
+        return reply
     }
 }
 

@@ -2,18 +2,49 @@ import SwiftUI
 
 struct AskView: View {
     let snapshot: BudgetSnapshot
+    let access: BudgetAccessState
     let openSettings: () -> Void
     @State private var conversation: ChatConversationState
 
-    init(snapshot: BudgetSnapshot, experience: BudgetExperience, openSettings: @escaping () -> Void) {
+    init(snapshot: BudgetSnapshot, access: BudgetAccessState, openSettings: @escaping () -> Void) {
         self.snapshot = snapshot
+        self.access = access
         self.openSettings = openSettings
-        _conversation = State(initialValue: ChatConversationState(experience: experience))
+        _conversation = State(initialValue: ChatConversationState(experience: access.experience))
     }
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: LayoutSpace.medium) {
+                HStack {
+                    Text("Answering with \(access.activeProviderName)", comment: "Active assistant indicator")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Menu {
+                        ForEach(access.providers) { provider in
+                            Button {
+                                do {
+                                    try access.setActiveProvider(provider.id)
+                                } catch {
+                                    // The access state reports the failure itself.
+                                }
+                            } label: {
+                                if provider.id == access.activeProviderID {
+                                    Label(provider.name, systemImage: "checkmark")
+                                } else {
+                                    Text(verbatim: provider.name)
+                                }
+                            }
+                        }
+                    } label: {
+                        Label(String(localized: "Switch assistant", comment: "Switch the active assistant"), systemImage: "arrow.left.arrow.right")
+                            .labelStyle(.iconOnly)
+                            .accessibilityLabel(String(localized: "Switch assistant", comment: "Switch the active assistant"))
+                    }
+                    .frame(minWidth: 44, minHeight: 44)
+                }
+
                 if conversation.messages.isEmpty {
                     Text("Let's look at your budget together", comment: "Supportive chat welcome heading")
                         .font(.title2.bold())
@@ -33,7 +64,7 @@ struct AskView: View {
                 }
 
                 ForEach(conversation.messages) { message in
-                    ChatMessageRow(message: message)
+                    ChatMessageRow(message: message, providerName: access.providerName(for: message.providerID))
                 }
 
                 if conversation.isSending {
@@ -49,7 +80,7 @@ struct AskView: View {
                                 Task { await conversation.retry(snapshot: snapshot) }
                             }
                             .frame(minHeight: 44)
-                        } else if failure == .invalidKey || failure == .missingKey || failure == .keyStorage {
+                        } else if failure.requiresKeyFix {
                             Button(String(localized: "Open Settings", comment: "Correct an invalid or missing API key"), systemImage: "gearshape", action: openSettings)
                         }
                     }
@@ -64,7 +95,7 @@ struct AskView: View {
         .background(Color(.systemGroupedBackground))
         .safeAreaInset(edge: .bottom) {
             VStack(alignment: .leading, spacing: LayoutSpace.small) {
-                Text("Sending a question shares this snapshot and recent chat with OpenAI. No currency is specified.", comment: "Disclosure immediately above chat composer")
+                Text("Sending a question shares this snapshot and recent chat with \(access.activeProviderName). No currency is specified.", comment: "Disclosure immediately above chat composer")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 HStack(alignment: .bottom, spacing: LayoutSpace.small) {

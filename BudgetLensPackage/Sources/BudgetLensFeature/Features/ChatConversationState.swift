@@ -24,7 +24,7 @@ final class ChatConversationState {
         draft = ""
         messages.append(ChatMessage(role: .user, text: question))
         pendingQuestion = question
-        await requestReply(snapshot: snapshot)
+        await requestReply(snapshot: snapshot, providerID: experience.activeProviderID)
     }
 
     func useSuggestion(_ question: String, snapshot: BudgetSnapshot) async {
@@ -34,10 +34,10 @@ final class ChatConversationState {
 
     func retry(snapshot: BudgetSnapshot) async {
         guard pendingQuestion != nil, isSending == false else { return }
-        await requestReply(snapshot: snapshot)
+        await requestReply(snapshot: snapshot, providerID: experience.activeProviderID)
     }
 
-    private func requestReply(snapshot: BudgetSnapshot) async {
+    private func requestReply(snapshot: BudgetSnapshot, providerID: String) async {
         guard let question = pendingQuestion else { return }
         isSending = true
         failure = nil
@@ -45,7 +45,7 @@ final class ChatConversationState {
         do {
             let history = Array(messages.dropLast())
             let reply = try await experience.ask(question, history: history, snapshot: snapshot)
-            messages.append(ChatMessage(role: .assistant, text: reply))
+            messages.append(ChatMessage(role: .assistant, text: reply, providerID: providerID))
             pendingQuestion = nil
         } catch is CancellationError {
             // Cancellation is an expected result when a request is abandoned.

@@ -17,14 +17,16 @@ enum ProviderFailure: Error {
 }
 
 struct OpenAIResponseClient: LLMResponding {
+    let provider: Provider
     let session: URLSession
 
-    init(session: URLSession = URLSession(configuration: .ephemeral)) {
+    init(provider: Provider, session: URLSession = URLSession(configuration: .ephemeral)) {
+        self.provider = provider
         self.session = session
     }
 
     func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String {
-        guard let url = URL(string: "https://api.openai.com/v1/responses") else {
+        guard let base = provider.baseURL, let url = URL(string: "\(base)/v1/responses") else {
             throw ProviderFailure.serviceUnavailable
         }
         var request = URLRequest(url: url)
@@ -33,23 +35,11 @@ struct OpenAIResponseClient: LLMResponding {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let body = ResponseRequest(model: "gpt-4.1-mini", instructions: instructions, input: messages, store: false)
+        let body = ResponseRequest(model: provider.model, instructions: instructions, input: messages, store: false)
         request.httpBody = try JSONEncoder().encode(body)
 
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await session.data(for: request)
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch let error as URLError where error.code == .cancelled {
-            throw CancellationError()
-        } catch {
-            throw ProviderFailure.connection
-        }
-        guard let http = response as? HTTPURLResponse else { throw ProviderFailure.serviceUnavailable }
-        if http.statusCode == 401 || http.statusCode == 403 { throw ProviderFailure.invalidKey }
-        guard (200..<300).contains(http.statusCode) else { throw ProviderFailure.serviceUnavailable }
+        let (data, http) = try await session.providerData(for: request)
+        if let failure = ProviderStatusMapping.classify(status: http.statusCode, body: data) { throw failure }
         return try Self.parseReply(data)
     }
 
