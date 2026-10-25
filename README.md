@@ -54,6 +54,7 @@ The Ask composer names the active assistant and discloses that sending a questio
 - **Richer, structured context.** Per-category percentages are omitted, so the model derives them; a fixed schema, with prompt fixtures under test, would make the context easier to audit.
 - **Prompt injection beyond one sentence.** The snapshot is trusted local data and the instructions tell the model not to follow text inside it, but that is defense in depth, not a guarantee. Transaction descriptions or merchant names from Plaid would need real handling.
 - **Reply rendering.** Replies are shown as plain text, so Markdown appears raw; I would render a safe subset.
+- **Default model IDs against live endpoints.** I would confirm each default in the Providers table (`gpt-4.1-mini`, `claude-haiku-5-5`, `gemini-3.8-flash`, `deepseek-flash`) with a real key and one request per provider, and fix any ID a provider rejects. No automated test reaches a live endpoint, so a retired or mistyped ID would only surface at runtime, as a "request rejected" message with a Settings action.
 
 ## Deliberate omissions
 
