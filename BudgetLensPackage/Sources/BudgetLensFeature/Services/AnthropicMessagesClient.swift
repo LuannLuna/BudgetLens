@@ -13,18 +13,12 @@ struct AnthropicMessagesClient: LLMResponding {
         guard let base = provider.baseURL, let url = URL(string: "\(base)/v1/messages") else {
             throw ProviderFailure.serviceUnavailable
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 30
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue(key, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body = AnthropicRequest(model: provider.model, maxTokens: 1024, system: instructions, messages: messages)
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, http) = try await session.providerData(for: request)
-        if let failure = ProviderStatusMapping.classify(status: http.statusCode, body: data) { throw failure }
+        let data = try await session.postJSON(
+            to: url,
+            headers: ["x-api-key": key, "anthropic-version": "2023-06-01"],
+            body: body
+        )
         return try Self.parseReply(data)
     }
 

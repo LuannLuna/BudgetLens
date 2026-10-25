@@ -160,4 +160,38 @@ final class BudgetLensUITests: XCTestCase {
         let showsAnthropic = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS 'Anthropic'"), object: picker)
         XCTAssertEqual(XCTWaiter().wait(for: [showsAnthropic], timeout: 3), .completed)
     }
+
+    @MainActor
+    func testInvalidKeyErrorOffersSettingsAndReturnsTheQuestion() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing-reset", "--ui-testing-provider-failure=invalid-key"]
+        app.launch()
+
+        let keyField = app.secureTextFields["apiKeyField"]
+        XCTAssertTrue(keyField.waitForExistence(timeout: 5))
+        keyField.tap()
+        keyField.typeText("test-only-sample-key")
+        app.buttons["continueButton"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Ask"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Ask"].tap()
+
+        let question = "Which categories are over budget?"
+        let composer = app.descendants(matching: .any)["chatComposer"]
+        XCTAssertTrue(composer.waitForExistence(timeout: 3))
+        composer.tap()
+        composer.typeText(question)
+        app.buttons["sendButton"].tap()
+
+        let notice = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "couldn't accept that key")).firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Open Settings"].exists)
+        XCTAssertFalse(app.buttons["Try again"].exists)
+
+        // The question goes back to the composer instead of staying in the chat.
+        XCTAssertEqual(composer.value as? String, question)
+        XCTAssertFalse(app.staticTexts[question].exists)
+
+        app.buttons["Open Settings"].tap()
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 3))
+    }
 }

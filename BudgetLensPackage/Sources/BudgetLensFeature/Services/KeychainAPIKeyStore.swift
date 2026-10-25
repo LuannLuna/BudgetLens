@@ -15,7 +15,12 @@ enum KeychainFailure: Error {
 struct KeychainAPIKeyStore: APIKeyStoring {
     let service: String
 
-    init(service: String = "com.example.BudgetLens.llm-keys") {
+    /// Follows the app's bundle id, so the Keychain namespace changes with the app identity.
+    static var defaultService: String {
+        "\(Bundle.main.bundleIdentifier ?? "com.example.BudgetLens").llm-keys"
+    }
+
+    init(service: String = KeychainAPIKeyStore.defaultService) {
         self.service = service
     }
 

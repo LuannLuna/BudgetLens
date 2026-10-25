@@ -24,11 +24,20 @@ public struct BudgetLensEntryView: View {
             experience: BudgetExperience(
                 snapshotLoader: BundledSnapshotLoader(),
                 keyStore: KeychainAPIKeyStore(),
-                clientResolver: ProviderClientRegistry(),
+                clientResolver: makeClientResolver(),
                 activeProviderStore: UserDefaultsActiveProviderStore(),
                 customProviderStore: CustomProviderStore(),
                 reporter: SafeErrorReporter()
             )
         )
+    }
+
+    private static func makeClientResolver() -> any LLMClientResolving {
+        #if DEBUG
+        if let failure = ForcedFailureResolver.failure(from: ProcessInfo.processInfo.arguments) {
+            return ForcedFailureResolver(failure: failure)
+        }
+        #endif
+        return ProviderClientRegistry()
     }
 }

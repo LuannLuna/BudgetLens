@@ -47,10 +47,10 @@ struct BudgetCategoryRow: View {
     @ViewBuilder
     private var categoryKind: some View {
         switch category.categoryType {
-        case "essential": Text("Essential", comment: "Essential budget category type")
-        case "discretionary": Text("Discretionary", comment: "Discretionary budget category type")
-        case "savings": Text("Savings", comment: "Savings budget category type")
-        default: Text("Category", comment: "Fallback for an unknown category type")
+        case .essential: Text("Essential", comment: "Essential budget category type")
+        case .discretionary: Text("Discretionary", comment: "Discretionary budget category type")
+        case .savings: Text("Savings", comment: "Savings budget category type")
+        case .other: Text("Category", comment: "Fallback for an unknown category type")
         }
     }
 }

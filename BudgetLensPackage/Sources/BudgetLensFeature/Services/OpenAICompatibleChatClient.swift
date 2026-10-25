@@ -13,18 +13,9 @@ struct OpenAICompatibleChatClient: LLMResponding {
         guard let base = provider.baseURL, let url = URL(string: "\(base)/chat/completions") else {
             throw ProviderFailure.serviceUnavailable
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 30
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let chatMessages = [ProviderMessage(role: "system", content: instructions)] + messages
         let body = ChatCompletionsRequest(model: provider.model, messages: chatMessages)
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, http) = try await session.providerData(for: request)
-        if let failure = ProviderStatusMapping.classify(status: http.statusCode, body: data) { throw failure }
+        let data = try await session.postJSON(to: url, headers: ["Authorization": "Bearer \(key)"], body: body)
         return try Self.parseReply(data)
     }
 

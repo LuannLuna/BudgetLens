@@ -14,6 +14,7 @@ final class BudgetAccessState {
     private(set) var keyRevision = 0
     private(set) var providers: [Provider] = Provider.catalog
     private(set) var keyStates: [ProviderKeyState] = []
+    private(set) var catalogFailure: ExperienceFailure?
     private(set) var activeProviderID = Provider.openAI.id
     private(set) var justConnectedProviderName: String?
     let experience: BudgetExperience
@@ -104,24 +105,19 @@ final class BudgetAccessState {
         }
     }
 
+    /// Throws before changing anything, so a failed switch leaves the current screen and assistant as they were.
     func setActiveProvider(_ providerID: String) throws {
+        let hasKey = try experience.hasKey(providerID: providerID)
         try experience.setActiveProviderID(providerID)
         activeProviderID = providerID
         refreshCatalog()
-        do {
-            if try experience.hasKey(providerID: providerID) {
-                // Switching between keyed assistants keeps the in-memory conversation.
-                if case .needsKey(let snapshot, _) = phase { phase = .ready(snapshot) }
-            } else if case .ready(let snapshot) = phase {
-                phase = .needsKey(snapshot, providerID: providerID)
-            } else if case .needsKey(let snapshot, _) = phase {
-                phase = .needsKey(snapshot, providerID: providerID)
-            }
-        } catch let error as ExperienceFailure {
-            phase = .failure(error)
-        } catch {
-            experience.report(error, context: "provider switching")
-            phase = .failure(.keyStorage)
+        if hasKey {
+            // Switching between keyed assistants keeps the in-memory conversation.
+            if case .needsKey(let snapshot, _) = phase { phase = .ready(snapshot) }
+        } else if case .ready(let snapshot) = phase {
+            phase = .needsKey(snapshot, providerID: providerID)
+        } else if case .needsKey(let snapshot, _) = phase {
+            phase = .needsKey(snapshot, providerID: providerID)
         }
     }
 
@@ -146,7 +142,14 @@ final class BudgetAccessState {
         providers = experience.providers()
         let active = experience.activeProviderID
         activeProviderID = providers.contains { $0.id == active } ? active : Provider.openAI.id
-        keyStates = (try? experience.keyStates()) ?? providers.map { ProviderKeyState(provider: $0, hasKey: false) }
+        do {
+            keyStates = try experience.keyStates()
+            catalogFailure = nil
+        } catch {
+            // The experience already reported it; show every row as "No key" plus a notice instead of hiding the problem.
+            keyStates = providers.map { ProviderKeyState(provider: $0, hasKey: false) }
+            catalogFailure = error as? ExperienceFailure ?? .keyStorage
+        }
     }
 
     private func moveOnAfterActiveKeyRemoval() {

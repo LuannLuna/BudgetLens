@@ -10,7 +10,7 @@ struct ExperienceFailureTests {
         .keyStorage, .invalidProvider
     ]
     static let noAskAction: [ExperienceFailure] = [
-        .snapshotUnavailable, .invalidProviderDetails("Enter a name for the assistant.")
+        .snapshotUnavailable, .providerStorage, .invalidProviderDetails(.emptyName)
     ]
 
     @Test(arguments: ExperienceFailureTests.retryable)

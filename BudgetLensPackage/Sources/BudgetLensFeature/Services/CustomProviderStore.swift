@@ -1,7 +1,7 @@
 import Foundation
 
 protocol CustomProviderStoring {
-    func load() -> [Provider]
+    func load() throws -> [Provider]
     func save(_ providers: [Provider]) throws
 }
 
@@ -17,12 +17,9 @@ struct CustomProviderStore: CustomProviderStoring {
         self.defaults = defaults
     }
 
-    func load() -> [Provider] {
-        guard let data = defaults.data(forKey: key),
-              let providers = try? JSONDecoder().decode([Provider].self, from: data) else {
-            return []
-        }
-        return providers
+    func load() throws -> [Provider] {
+        guard let data = defaults.data(forKey: key) else { return [] }
+        return try JSONDecoder().decode([Provider].self, from: data)
     }
 
     func save(_ providers: [Provider]) throws {

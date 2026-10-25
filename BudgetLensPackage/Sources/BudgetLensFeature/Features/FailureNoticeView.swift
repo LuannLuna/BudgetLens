@@ -26,8 +26,14 @@ struct FailureNoticeView: View {
                 Text("We couldn't access the saved key on this device. Please try again.", comment: "Keychain failure recovery")
             case .invalidProvider:
                 Text("That assistant isn't available anymore. Please choose another in Settings.", comment: "Unknown assistant recovery")
-            case .invalidProviderDetails(let message):
-                Text(verbatim: message)
+            case .providerStorage:
+                Text("We couldn't save that assistant on this device. Please try again.", comment: "Custom assistant storage failure recovery")
+            case .invalidProviderDetails(.emptyName):
+                Text("Enter a name for the assistant.", comment: "Custom provider validation: missing name")
+            case .invalidProviderDetails(.invalidURL):
+                Text("Enter an https:// base URL with a host and no credentials or query.", comment: "Custom provider validation: invalid base URL")
+            case .invalidProviderDetails(.emptyModel):
+                Text("Enter the model name this endpoint accepts.", comment: "Custom provider validation: missing model")
             }
         }
         .foregroundStyle(.secondary)

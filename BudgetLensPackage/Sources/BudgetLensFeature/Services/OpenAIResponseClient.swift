@@ -31,17 +31,8 @@ struct OpenAIResponseClient: LLMResponding {
         guard let base = provider.baseURL, let url = URL(string: "\(base)/v1/responses") else {
             throw ProviderFailure.serviceUnavailable
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 30
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body = ResponseRequest(model: provider.model, instructions: instructions, input: messages, store: false)
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, http) = try await session.providerData(for: request)
-        if let failure = ProviderStatusMapping.classify(status: http.statusCode, body: data) { throw failure }
+        let data = try await session.postJSON(to: url, headers: ["Authorization": "Bearer \(key)"], body: body)
         return try Self.parseReply(data)
     }
 

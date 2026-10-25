@@ -60,7 +60,7 @@ struct SettingsView: View {
                     Text("Use any OpenAI-compatible endpoint: a name, an https:// base URL, and a model. Removing an assistant also deletes its key.", comment: "Custom assistant usage note")
                 }
 
-                if let failure {
+                if let failure = failure ?? access.catalogFailure {
                     Section { FailureNoticeView(failure: failure) }
                 }
             }

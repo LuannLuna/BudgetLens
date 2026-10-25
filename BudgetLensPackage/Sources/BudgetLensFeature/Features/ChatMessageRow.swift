@@ -16,7 +16,7 @@ struct ChatMessageRow: View {
                 Text("BudgetLens", comment: "Chat message sender: the assistant")
                     .font(.caption.bold())
             }
-            Text(verbatim: message.text)
+            content
                 .textSelection(.enabled)
                 .privacySensitive()
         }
@@ -24,5 +24,15 @@ struct ChatMessageRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: LayoutSpace.medium))
         .accessibilityElement(children: .combine)
+    }
+
+    /// Your own text is shown as typed; the assistant's reply gets inline Markdown styling.
+    @ViewBuilder
+    private var content: some View {
+        if message.role == .assistant {
+            Text(ReplyMarkdown.render(message.text))
+        } else {
+            Text(verbatim: message.text)
+        }
     }
 }

@@ -39,11 +39,21 @@ struct BudgetExperience {
     }
 
     func providers() -> [Provider] {
-        Provider.catalog + customProviderStore.load()
+        Provider.catalog + customProviders()
     }
 
     func provider(matching id: String) -> Provider? {
         providers().first { $0.id == id }
+    }
+
+    /// An unreadable custom-assistant list is reported and treated as empty, so the built-in assistants keep working.
+    private func customProviders() -> [Provider] {
+        do {
+            return try customProviderStore.load()
+        } catch {
+            reporter.report(error, context: "custom provider loading")
+            return []
+        }
     }
 
     func providerName(for id: String?) -> String? {
@@ -114,16 +124,16 @@ struct BudgetExperience {
         do {
             provider = try ProviderFactory.custom(name: name, baseURL: baseURL, model: model)
         } catch let failure as ProviderFactory.ValidationFailure {
-            throw ExperienceFailure.invalidProviderDetails(failure.message)
+            throw ExperienceFailure.invalidProviderDetails(failure)
         }
         do {
-            var customs = customProviderStore.load()
+            var customs = customProviders()
             customs.append(provider)
             try customProviderStore.save(customs)
             return provider
         } catch {
             reporter.report(error, context: "custom provider saving")
-            throw ExperienceFailure.keyStorage
+            throw ExperienceFailure.providerStorage
         }
     }
 
@@ -135,13 +145,13 @@ struct BudgetExperience {
             // The provider is removed regardless; the key may already be absent.
             reporter.report(error, context: "custom provider key clearing")
         }
-        var customs = customProviderStore.load()
+        var customs = customProviders()
         customs.removeAll { $0.id == id }
         do {
             try customProviderStore.save(customs)
         } catch {
             reporter.report(error, context: "custom provider removing")
-            throw ExperienceFailure.keyStorage
+            throw ExperienceFailure.providerStorage
         }
         if activeProviderStore.activeProviderID() == id {
             activeProviderStore.setActiveProviderID(Provider.openAI.id)

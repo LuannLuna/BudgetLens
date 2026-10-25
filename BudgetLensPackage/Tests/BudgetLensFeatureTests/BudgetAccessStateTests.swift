@@ -59,6 +59,21 @@ struct BudgetAccessStateTests {
         #expect(providerID == "gemini")
     }
 
+    @Test func failedSwitchKeepsTheCurrentScreenAndAssistant() {
+        let (access, store, activeStore) = makeAccess(keys: ["openai": "a"], reporter: SilentReporter())
+        access.prepare()
+        store.failsOnRead = true
+
+        #expect(throws: ExperienceFailure.keyStorage) { try access.setActiveProvider("gemini") }
+
+        #expect(access.activeProviderID == "openai")
+        #expect(activeStore.id == "openai")
+        guard case .ready = access.phase else {
+            Issue.record("A failed switch should not replace the budget screen")
+            return
+        }
+    }
+
     @Test func clearingActiveKeyFallsBackToAnotherKeyedAssistant() throws {
         let (access, _, activeStore) = makeAccess(keys: ["openai": "a", "anthropic": "b"])
         access.prepare()
@@ -166,56 +181,32 @@ struct BudgetAccessStateTests {
         #expect(access.keyRevision == revision + 1)
     }
 
+    @Test func unreadableKeysShowANoticeAndRecover() throws {
+        let reporter = RecordingReporter()
+        let (access, store, _) = makeAccess(keys: ["openai": "a"], reporter: reporter)
+        access.prepare()
+        #expect(access.catalogFailure == nil)
+
+        store.failsOnRead = true
+        try access.saveKey("b", providerID: "openai")
+        #expect(access.catalogFailure == .keyStorage)
+        #expect(access.keyStates.allSatisfy { $0.hasKey == false })
+        #expect(reporter.contexts.contains("key listing"))
+
+        store.failsOnRead = false
+        try access.saveKey("c", providerID: "openai")
+        #expect(access.catalogFailure == nil)
+        #expect(access.hasKey(providerID: "openai"))
+    }
+
     private func makeAccess(
         keys: [String: String] = [:],
-        activeID: String = "openai"
+        activeID: String = "openai",
+        reporter: any ErrorReporting = StrictReporter()
     ) -> (BudgetAccessState, InMemoryKeyStore, InMemoryActiveStore) {
         let store = InMemoryKeyStore(keys: keys)
         let activeStore = InMemoryActiveStore(id: activeID)
-        let experience = BudgetExperience(
-            snapshotLoader: BundledSnapshotLoader(),
-            keyStore: store,
-            clientResolver: TestResolver(responder: NoNetworkResponder()),
-            activeProviderStore: activeStore,
-            customProviderStore: InMemoryCustomStore(),
-            reporter: TestErrorReporter()
-        )
+        let experience = makeTestExperience(keyStore: store, activeStore: activeStore, reporter: reporter)
         return (BudgetAccessState(experience: experience), store, activeStore)
     }
-}
-
-private final class InMemoryKeyStore: APIKeyStoring {
-    var keys: [String: String]
-    init(keys: [String: String] = [:]) { self.keys = keys }
-    func read(providerID: String) throws -> String? { keys[providerID] }
-    func save(_ key: String, providerID: String) throws { keys[providerID] = key }
-    func clear(providerID: String) throws { keys[providerID] = nil }
-}
-
-private final class InMemoryActiveStore: ActiveProviderStoring {
-    var id: String
-    init(id: String = "openai") { self.id = id }
-    func activeProviderID() -> String { id }
-    func setActiveProviderID(_ id: String) { self.id = id }
-}
-
-private final class InMemoryCustomStore: CustomProviderStoring {
-    var saved: [Provider] = []
-    func load() -> [Provider] { saved }
-    func save(_ providers: [Provider]) throws { saved = providers }
-}
-
-private struct TestResolver: LLMClientResolving {
-    let responder: any LLMResponding
-    func client(for provider: Provider) -> any LLMResponding { responder }
-}
-
-private struct NoNetworkResponder: LLMResponding {
-    func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String {
-        "This test does not make network requests."
-    }
-}
-
-private struct TestErrorReporter: ErrorReporting {
-    func report(_ error: any Error, context: String) { Issue.record("Unexpected error in test: \(context)") }
 }

@@ -5,7 +5,7 @@ import Testing
 struct ChatConversationStateTests {
     @Test func retryKeepsOneQuestionAndAddsTheReply() async throws {
         let responder = FlakyResponder()
-        let experience = makeExperience(responder: responder)
+        let experience = makeTestExperience(resolver: StubResolver(responder: responder))
         let conversation = ChatConversationState(experience: experience)
         let snapshot = try experience.loadSnapshot()
 
@@ -24,7 +24,7 @@ struct ChatConversationStateTests {
     }
 
     @Test func failureFixedInSettingsReturnsTheQuestionToTheComposer() async throws {
-        let experience = makeExperience(responder: FailingResponder(failure: .invalidKey))
+        let experience = makeTestExperience(resolver: StubResolver(responder: SampleResponder(failure: .invalidKey)))
         let conversation = ChatConversationState(experience: experience)
         let snapshot = try experience.loadSnapshot()
 
@@ -34,17 +34,6 @@ struct ChatConversationStateTests {
         #expect(conversation.failure == .invalidKey(providerName: "OpenAI"))
         #expect(conversation.messages.isEmpty)
         #expect(conversation.draft == "Which categories are over budget?")
-    }
-
-    private func makeExperience(responder: any LLMResponding) -> BudgetExperience {
-        BudgetExperience(
-            snapshotLoader: BundledSnapshotLoader(),
-            keyStore: ChatTestKeyStore(),
-            clientResolver: ChatTestResolver(responder: responder),
-            activeProviderStore: ChatTestActiveStore(),
-            customProviderStore: ChatTestCustomStore(),
-            reporter: ChatTestReporter()
-        )
     }
 }
 
@@ -56,37 +45,4 @@ private actor FlakyResponder: LLMResponding {
         if requestCount == 1 { throw ProviderFailure.connection }
         return "Groceries and Dining Out are above their planned amounts."
     }
-}
-
-private struct FailingResponder: LLMResponding {
-    let failure: ProviderFailure
-
-    func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String {
-        throw failure
-    }
-}
-
-private struct ChatTestKeyStore: APIKeyStoring {
-    func read(providerID: String) throws -> String? { "test-only" }
-    func save(_ key: String, providerID: String) throws {}
-    func clear(providerID: String) throws {}
-}
-
-private final class ChatTestActiveStore: ActiveProviderStoring {
-    func activeProviderID() -> String { "openai" }
-    func setActiveProviderID(_ id: String) {}
-}
-
-private struct ChatTestCustomStore: CustomProviderStoring {
-    func load() -> [Provider] { [] }
-    func save(_ providers: [Provider]) throws {}
-}
-
-private struct ChatTestResolver: LLMClientResolving {
-    let responder: any LLMResponding
-    func client(for provider: Provider) -> any LLMResponding { responder }
-}
-
-private struct ChatTestReporter: ErrorReporting {
-    func report(_ error: any Error, context: String) {}
 }

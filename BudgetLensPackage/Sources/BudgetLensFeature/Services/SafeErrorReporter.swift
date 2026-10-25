@@ -6,7 +6,7 @@ protocol ErrorReporting {
 }
 
 struct SafeErrorReporter: ErrorReporting {
-    private let logger = Logger(subsystem: "com.example.BudgetLens", category: "Failures")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.example.BudgetLens", category: "Failures")
 
     func report(_ error: any Error, context: String) {
         // Only fixed context labels and the error type; never log provider bodies, keys, or budget data.

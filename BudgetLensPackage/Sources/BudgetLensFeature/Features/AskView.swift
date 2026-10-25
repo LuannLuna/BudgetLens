@@ -5,6 +5,7 @@ struct AskView: View {
     let access: BudgetAccessState
     let openSettings: () -> Void
     @State private var conversation: ChatConversationState
+    @State private var switchFailure: ExperienceFailure?
 
     init(snapshot: BudgetSnapshot, access: BudgetAccessState, openSettings: @escaping () -> Void) {
         self.snapshot = snapshot
@@ -24,11 +25,7 @@ struct AskView: View {
                     Menu {
                         ForEach(access.providers) { provider in
                             Button {
-                                do {
-                                    try access.setActiveProvider(provider.id)
-                                } catch {
-                                    // The access state reports the failure itself.
-                                }
+                                switchAssistant(to: provider.id)
                             } label: {
                                 if provider.id == access.activeProviderID {
                                     Label(provider.name, systemImage: "checkmark")
@@ -43,6 +40,10 @@ struct AskView: View {
                             .accessibilityLabel(String(localized: "Switch assistant", comment: "Switch the active assistant"))
                     }
                     .frame(minWidth: 44, minHeight: 44)
+                }
+
+                if let switchFailure {
+                    FailureNoticeView(failure: switchFailure)
                 }
 
                 if conversation.messages.isEmpty {
@@ -112,6 +113,18 @@ struct AskView: View {
             }
             .padding(LayoutSpace.medium)
             .background(Color(.secondarySystemGroupedBackground))
+        }
+    }
+
+    private func switchAssistant(to providerID: String) {
+        do {
+            try access.setActiveProvider(providerID)
+            switchFailure = nil
+        } catch let error as ExperienceFailure {
+            switchFailure = error
+        } catch {
+            access.experience.report(error, context: "assistant switching")
+            switchFailure = .serviceUnavailable
         }
     }
 

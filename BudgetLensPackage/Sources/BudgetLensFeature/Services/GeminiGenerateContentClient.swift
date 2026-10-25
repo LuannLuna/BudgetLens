@@ -14,12 +14,6 @@ struct GeminiGenerateContentClient: LLMResponding {
               let url = URL(string: "\(base)/v1beta/models/\(provider.model):generateContent") else {
             throw ProviderFailure.serviceUnavailable
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 30
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue(key, forHTTPHeaderField: "x-goog-api-key")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body = GeminiRequest(
             systemInstruction: GeminiContent(role: nil, parts: [GeminiPart(text: instructions)]),
             contents: messages.map { message in
@@ -29,10 +23,7 @@ struct GeminiGenerateContentClient: LLMResponding {
                 )
             }
         )
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, http) = try await session.providerData(for: request)
-        if let failure = ProviderStatusMapping.classify(status: http.statusCode, body: data) { throw failure }
+        let data = try await session.postJSON(to: url, headers: ["x-goog-api-key": key], body: body)
         return try Self.parseReply(data)
     }
 

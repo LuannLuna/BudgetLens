@@ -1,18 +1,26 @@
 struct BudgetContext {
     static func description(for snapshot: BudgetSnapshot) -> String {
         let categories = snapshot.categories.map { category in
-            "- \(category.categoryName) (\(category.categoryType)): budgeted \(category.budgetedCents) cents, spent \(category.spentCents) cents, remaining \(category.remainingCents) cents, over budget: \(category.isOverBudget)"
+            "- \(category.categoryName) (\(category.categoryType.name)): budgeted \(amount(category.budgetedCents)), spent \(amount(category.spentCents)), remaining \(amount(category.remainingCents)), over budget: \(category.isOverBudget)"
         }.joined(separator: "\n")
 
         return """
         Historical budget snapshot for \(snapshot.period). Not current account data.
-        Currency is NOT specified. Every amount below is in cents of an unspecified currency. Do not add a currency symbol or infer available cash.
-        Budgeted: \(snapshot.totalBudgetedCents) cents; spent across categories: \(snapshot.totalSpentCents) cents; income: \(snapshot.totalIncomeCents) cents.
+        Currency is NOT specified. Every amount below is in major units (for example 714.00) of an unspecified currency. Do not add a currency symbol or infer available cash.
+        Budgeted: \(amount(snapshot.totalBudgetedCents)); spent across categories: \(amount(snapshot.totalSpentCents)); income: \(amount(snapshot.totalIncomeCents)).
         Spent percentage: \(snapshot.spentPercentage)%; remaining percentage: \(snapshot.remainingPercentage)%.
-        Unallocated budget (separately reported): \(snapshot.unallocatedBudgetCents) cents; unbudgeted spending (separately reported): \(snapshot.unbudgetedSpentCents) cents. Do not add these to other totals without evidence.
+        Unallocated budget (separately reported): \(amount(snapshot.unallocatedBudgetCents)); unbudgeted spending (separately reported): \(amount(snapshot.unbudgetedSpentCents)). Do not add these to other totals without evidence.
         Categories: \(snapshot.categoryCount); over-budget categories: \(snapshot.overBudgetCategoryCount).
         \(categories)
         """
+    }
+
+    /// Major units with a period and no grouping, so the model never sees locale-formatted or cent-scaled numbers.
+    static func amount(_ cents: Int) -> String {
+        let sign = cents < 0 ? "-" : ""
+        let absolute = abs(cents)
+        let remainder = absolute % 100
+        return "\(sign)\(absolute / 100).\(remainder < 10 ? "0" : "")\(remainder)"
     }
 
     static let instructions = """

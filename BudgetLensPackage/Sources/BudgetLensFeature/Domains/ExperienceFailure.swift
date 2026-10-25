@@ -8,8 +8,9 @@ enum ExperienceFailure: Error, Equatable {
     case serviceUnavailable
     case snapshotUnavailable
     case keyStorage
+    case providerStorage
     case invalidProvider
-    case invalidProviderDetails(String)
+    case invalidProviderDetails(ProviderFactory.ValidationFailure)
 
     var canRetryQuestion: Bool {
         switch self {
