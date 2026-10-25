@@ -138,7 +138,7 @@ final class BudgetAccessState {
     }
 
     private func refreshCatalog() {
-        providers = (try? experience.providers()) ?? Provider.catalog
+        providers = experience.providers()
         let active = experience.activeProviderID
         activeProviderID = providers.contains { $0.id == active } ? active : Provider.openAI.id
         keyStates = (try? experience.keyStates()) ?? providers.map { ProviderKeyState(provider: $0, hasKey: false) }

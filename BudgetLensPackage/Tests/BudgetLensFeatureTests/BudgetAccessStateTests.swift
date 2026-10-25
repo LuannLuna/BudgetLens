@@ -116,6 +116,7 @@ struct BudgetAccessStateTests {
         let store = InMemoryKeyStore(keys: keys)
         let activeStore = InMemoryActiveStore(id: activeID)
         let experience = BudgetExperience(
+            snapshotLoader: BundledSnapshotLoader(),
             keyStore: store,
             clientResolver: TestResolver(responder: NoNetworkResponder()),
             activeProviderStore: activeStore,
@@ -132,7 +133,6 @@ private final class InMemoryKeyStore: APIKeyStoring {
     func read(providerID: String) throws -> String? { keys[providerID] }
     func save(_ key: String, providerID: String) throws { keys[providerID] = key }
     func clear(providerID: String) throws { keys[providerID] = nil }
-    func migrateLegacyOpenAIKeyIfNeeded() throws {}
 }
 
 private final class InMemoryActiveStore: ActiveProviderStoring {

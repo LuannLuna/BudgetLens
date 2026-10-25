@@ -5,7 +5,6 @@ protocol APIKeyStoring {
     func read(providerID: String) throws -> String?
     func save(_ key: String, providerID: String) throws
     func clear(providerID: String) throws
-    func migrateLegacyOpenAIKeyIfNeeded() throws
 }
 
 enum KeychainFailure: Error {
@@ -15,13 +14,9 @@ enum KeychainFailure: Error {
 
 struct KeychainAPIKeyStore: APIKeyStoring {
     let service: String
-    private let legacyService: String
-    private let legacyAccount = "openai-api-key"
-    private let legacyProviderID = "openai"
 
-    init(service: String = "com.example.BudgetLens.llm-keys", legacyService: String = "com.example.BudgetLens.openai") {
+    init(service: String = "com.example.BudgetLens.llm-keys") {
         self.service = service
-        self.legacyService = legacyService
     }
 
     private func account(for providerID: String) -> String {
@@ -79,21 +74,6 @@ struct KeychainAPIKeyStore: APIKeyStoring {
         let status = SecItemDelete(identifier(service: service, account: account(for: providerID)) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainFailure.operationFailed(operation: "clear", status: status)
-        }
-    }
-
-    func migrateLegacyOpenAIKeyIfNeeded() throws {
-        let newKey = try read(providerID: legacyProviderID)
-        let legacyKey = try read(service: legacyService, account: legacyAccount)
-        switch LegacyKeyMigration.plan(newKey: newKey, legacyKey: legacyKey) {
-        case .none:
-            return
-        case .copy(let value):
-            try save(value, providerID: legacyProviderID)
-            let deleteStatus = SecItemDelete(identifier(service: legacyService, account: legacyAccount) as CFDictionary)
-            guard deleteStatus == errSecSuccess || deleteStatus == errSecItemNotFound else {
-                throw KeychainFailure.operationFailed(operation: "legacy cleanup", status: deleteStatus)
-            }
         }
     }
 }

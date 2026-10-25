@@ -45,16 +45,44 @@ struct BudgetExperienceTests {
         #expect(reply == "anthropic-answer")
     }
 
+    @Test func askSendsContextThenRecentHistoryThenQuestion() async throws {
+        let responder = RecordingResponder()
+        let experience = makeExperience(responder: responder)
+        let snapshot = try experience.loadSnapshot()
+        let history = (1...8).map { number in
+            ChatMessage(role: number.isMultiple(of: 2) ? .assistant : .user, text: "m\(number)")
+        }
+
+        _ = try await experience.ask("Now?", history: history, snapshot: snapshot)
+
+        let sent = await responder.messages
+        let recent = sent.dropFirst().dropLast()
+        #expect(sent.count == 8)
+        #expect(sent.first?.content == BudgetContext.description(for: snapshot))
+        #expect(recent.map(\.content) == ["m3", "m4", "m5", "m6", "m7", "m8"])
+        #expect(recent.map(\.role) == ["user", "assistant", "user", "assistant", "user", "assistant"])
+        #expect(sent.last?.content == "Now?")
+        #expect(sent.last?.role == "user")
+        #expect(await responder.instructions == BudgetContext.instructions)
+    }
+
+    @Test func keychainFailuresSurfaceAsKeyStorage() {
+        let experience = makeExperience(keyStore: UnreadableKeyStore())
+
+        #expect(throws: ExperienceFailure.keyStorage) { _ = try experience.hasKey(providerID: "openai") }
+        #expect(throws: ExperienceFailure.keyStorage) { _ = try experience.keyStates() }
+    }
+
     @Test func customProviderLifecycle() throws {
         let customStore = InMemoryCustomStore()
         let experience = makeExperience(customStore: customStore)
         let provider = try experience.addCustomProvider(name: "Local", baseURL: "https://example.com/v1", model: "m1")
         #expect(provider.kind == .openAICompatible)
         #expect(provider.isBuiltIn == false)
-        #expect(try experience.providers().count == Provider.catalog.count + 1)
+        #expect(experience.providers().count == Provider.catalog.count + 1)
 
         try experience.removeCustomProvider(id: provider.id)
-        #expect(try experience.providers().count == Provider.catalog.count)
+        #expect(experience.providers().count == Provider.catalog.count)
         #expect(customStore.saved.isEmpty)
     }
 
@@ -86,13 +114,15 @@ struct BudgetExperienceTests {
 
     private func makeExperience(
         key: String? = "test-only",
+        keyStore: (any APIKeyStoring)? = nil,
         responder: any LLMResponding = SampleResponder(reply: "ok"),
         activeID: String = "openai",
         customStore: any CustomProviderStoring = InMemoryCustomStore(),
         activeStore: InMemoryActiveStore = InMemoryActiveStore()
     ) -> BudgetExperience {
         BudgetExperience(
-            keyStore: SampleKeyStore(key: key),
+            snapshotLoader: BundledSnapshotLoader(),
+            keyStore: keyStore ?? SampleKeyStore(key: key),
             clientResolver: SampleResolver(responder: responder),
             activeProviderStore: activeStore,
             customProviderStore: customStore,
@@ -106,7 +136,12 @@ private struct SampleKeyStore: APIKeyStoring {
     func read(providerID: String) throws -> String? { key }
     func save(_ key: String, providerID: String) throws {}
     func clear(providerID: String) throws {}
-    func migrateLegacyOpenAIKeyIfNeeded() throws {}
+}
+
+private struct UnreadableKeyStore: APIKeyStoring {
+    func read(providerID: String) throws -> String? { throw KeychainFailure.invalidValue }
+    func save(_ key: String, providerID: String) throws {}
+    func clear(providerID: String) throws {}
 }
 
 private final class InMemoryActiveStore: ActiveProviderStoring {
@@ -144,6 +179,17 @@ private struct SampleResponder: LLMResponding {
     func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String {
         if let failure { throw failure }
         return reply
+    }
+}
+
+private actor RecordingResponder: LLMResponding {
+    private(set) var instructions = ""
+    private(set) var messages: [ProviderMessage] = []
+
+    func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String {
+        self.instructions = instructions
+        self.messages = messages
+        return "ok"
     }
 }
 

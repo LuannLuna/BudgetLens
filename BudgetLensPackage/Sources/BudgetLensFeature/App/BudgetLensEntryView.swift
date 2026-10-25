@@ -3,7 +3,7 @@ import SwiftUI
 /// The package's only public view: composes the production dependencies and starts the launch flow.
 @MainActor
 public struct BudgetLensEntryView: View {
-    @State private var access = BudgetAccessState(experience: BudgetExperience())
+    @State private var access = Self.makeAccess()
 
     public init() {}
 
@@ -17,5 +17,18 @@ public struct BudgetLensEntryView: View {
                 #endif
                 access.prepare()
             }
+    }
+
+    private static func makeAccess() -> BudgetAccessState {
+        BudgetAccessState(
+            experience: BudgetExperience(
+                snapshotLoader: BundledSnapshotLoader(),
+                keyStore: KeychainAPIKeyStore(),
+                clientResolver: ProviderClientRegistry(),
+                activeProviderStore: UserDefaultsActiveProviderStore(),
+                customProviderStore: CustomProviderStore(),
+                reporter: SafeErrorReporter()
+            )
+        )
     }
 }

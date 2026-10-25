@@ -6,6 +6,7 @@ struct ChatConversationStateTests {
     @Test func retryKeepsOneQuestionAndAddsTheReply() async throws {
         let responder = FlakyResponder()
         let experience = BudgetExperience(
+            snapshotLoader: BundledSnapshotLoader(),
             keyStore: ChatTestKeyStore(),
             clientResolver: ChatTestResolver(responder: responder),
             activeProviderStore: ChatTestActiveStore(),
@@ -44,7 +45,6 @@ private struct ChatTestKeyStore: APIKeyStoring {
     func read(providerID: String) throws -> String? { "test-only" }
     func save(_ key: String, providerID: String) throws {}
     func clear(providerID: String) throws {}
-    func migrateLegacyOpenAIKeyIfNeeded() throws {}
 }
 
 private final class ChatTestActiveStore: ActiveProviderStoring {

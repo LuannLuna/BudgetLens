@@ -2,20 +2,20 @@ import Foundation
 
 @MainActor
 struct BudgetExperience {
-    let snapshotLoader: BundledSnapshotLoader
-    let keyStore: any APIKeyStoring
-    let clientResolver: any LLMClientResolving
-    let activeProviderStore: any ActiveProviderStoring
-    let customProviderStore: any CustomProviderStoring
+    private let snapshotLoader: BundledSnapshotLoader
+    private let keyStore: any APIKeyStoring
+    private let clientResolver: any LLMClientResolving
+    private let activeProviderStore: any ActiveProviderStoring
+    private let customProviderStore: any CustomProviderStoring
     private let reporter: any ErrorReporting
 
     init(
-        snapshotLoader: BundledSnapshotLoader = BundledSnapshotLoader(),
-        keyStore: any APIKeyStoring = KeychainAPIKeyStore(),
-        clientResolver: any LLMClientResolving = ProviderClientRegistry(),
-        activeProviderStore: any ActiveProviderStoring = UserDefaultsActiveProviderStore(),
-        customProviderStore: any CustomProviderStoring = CustomProviderStore(),
-        reporter: any ErrorReporting = SafeErrorReporter()
+        snapshotLoader: BundledSnapshotLoader,
+        keyStore: any APIKeyStoring,
+        clientResolver: any LLMClientResolving,
+        activeProviderStore: any ActiveProviderStoring,
+        customProviderStore: any CustomProviderStoring,
+        reporter: any ErrorReporting
     ) {
         self.snapshotLoader = snapshotLoader
         self.keyStore = keyStore
@@ -38,13 +38,12 @@ struct BudgetExperience {
         provider(matching: activeProviderID) ?? .openAI
     }
 
-    func providers() throws -> [Provider] {
+    func providers() -> [Provider] {
         Provider.catalog + customProviderStore.load()
     }
 
     func provider(matching id: String) -> Provider? {
-        guard let all = try? providers() else { return nil }
-        return all.first { $0.id == id }
+        providers().first { $0.id == id }
     }
 
     func providerName(for id: String?) -> String? {
@@ -66,16 +65,23 @@ struct BudgetExperience {
     }
 
     func keyStates() throws -> [ProviderKeyState] {
-        try keyStore.migrateLegacyOpenAIKeyIfNeeded()
-        let all = try providers()
-        return try all.map { provider in
-            ProviderKeyState(provider: provider, hasKey: try keyStore.read(providerID: provider.id)?.isEmpty == false)
+        do {
+            return try providers().map { provider in
+                ProviderKeyState(provider: provider, hasKey: try keyStore.read(providerID: provider.id)?.isEmpty == false)
+            }
+        } catch {
+            reporter.report(error, context: "key listing")
+            throw ExperienceFailure.keyStorage
         }
     }
 
     func hasKey(providerID: String) throws -> Bool {
-        try keyStore.migrateLegacyOpenAIKeyIfNeeded()
-        return try keyStore.read(providerID: providerID)?.isEmpty == false
+        do {
+            return try keyStore.read(providerID: providerID)?.isEmpty == false
+        } catch {
+            reporter.report(error, context: "key checking")
+            throw ExperienceFailure.keyStorage
+        }
     }
 
     func saveKey(_ input: String, providerID: String) throws {
@@ -145,8 +151,7 @@ struct BudgetExperience {
     #if DEBUG
     /// Clears keys and assistant preferences so UI tests start from a known first-launch state.
     func resetForAutomatedTests() {
-        let allProviders = (try? providers()) ?? Provider.catalog
-        for provider in allProviders {
+        for provider in providers() {
             do {
                 try keyStore.clear(providerID: provider.id)
             } catch {
@@ -166,7 +171,6 @@ struct BudgetExperience {
         let provider = activeProvider
         let key: String
         do {
-            try keyStore.migrateLegacyOpenAIKeyIfNeeded()
             guard let saved = try keyStore.read(providerID: provider.id), saved.isEmpty == false else {
                 throw ExperienceFailure.missingKey
             }
