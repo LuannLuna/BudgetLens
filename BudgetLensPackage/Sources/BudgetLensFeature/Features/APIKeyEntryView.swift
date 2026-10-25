@@ -73,7 +73,7 @@ struct APIKeyEntryView: View {
         } catch let error as ExperienceFailure {
             failure = error
         } catch {
-            access.experience.reporter.report(error, context: "key entry")
+            access.experience.report(error, context: "key entry")
             failure = .keyStorage
         }
     }

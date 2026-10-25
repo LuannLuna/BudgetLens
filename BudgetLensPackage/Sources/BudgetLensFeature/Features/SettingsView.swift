@@ -31,12 +31,12 @@ struct SettingsView: View {
                         } catch let error as ExperienceFailure {
                             failure = error
                         } catch {
-                            access.experience.reporter.report(error, context: "assistant switching")
+                            access.experience.report(error, context: "assistant switching")
                             failure = .serviceUnavailable
                         }
                     }
                 } footer: {
-                    Text("Switching assistants keeps the current conversation. Choosing one without a key opens the key entry screen.", comment: "Assistant switching behavior note")
+                    Text("Switching to an assistant that already has a key keeps the current conversation. Choosing one without a key opens the key entry screen and starts a new chat once it's connected.", comment: "Assistant switching behavior note")
                 }
 
                 Section {
@@ -122,7 +122,7 @@ struct SettingsView: View {
         } catch let error as ExperienceFailure {
             failure = error
         } catch {
-            access.experience.reporter.report(error, context: "key removal")
+            access.experience.report(error, context: "key removal")
             failure = .keyStorage
         }
     }
@@ -134,7 +134,7 @@ struct SettingsView: View {
         } catch let error as ExperienceFailure {
             failure = error
         } catch {
-            access.experience.reporter.report(error, context: "custom assistant removal")
+            access.experience.report(error, context: "custom assistant removal")
             failure = .keyStorage
         }
     }

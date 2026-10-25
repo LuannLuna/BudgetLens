@@ -7,7 +7,7 @@ struct BudgetExperience {
     let clientResolver: any LLMClientResolving
     let activeProviderStore: any ActiveProviderStoring
     let customProviderStore: any CustomProviderStoring
-    let reporter: any ErrorReporting
+    private let reporter: any ErrorReporting
 
     init(
         snapshotLoader: BundledSnapshotLoader = BundledSnapshotLoader(),
@@ -23,6 +23,11 @@ struct BudgetExperience {
         self.activeProviderStore = activeProviderStore
         self.customProviderStore = customProviderStore
         self.reporter = reporter
+    }
+
+    /// Lets Features report failures without reaching into Services.
+    func report(_ error: any Error, context: String) {
+        reporter.report(error, context: context)
     }
 
     var activeProviderID: String {

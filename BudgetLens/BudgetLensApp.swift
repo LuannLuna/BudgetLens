@@ -5,7 +5,7 @@ import BudgetLensFeature
 struct BudgetLensApp: App {
     var body: some Scene {
         WindowGroup {
-            BudgetLensRootView()
+            BudgetLensEntryView()
         }
     }
 }

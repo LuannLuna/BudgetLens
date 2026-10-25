@@ -49,7 +49,7 @@ final class BudgetAccessState {
         } catch let error as ExperienceFailure {
             phase = .failure(error)
         } catch {
-            experience.reporter.report(error, context: "launch preparation")
+            experience.report(error, context: "launch preparation")
             phase = .failure(.serviceUnavailable)
         }
     }
@@ -115,7 +115,7 @@ final class BudgetAccessState {
         } catch let error as ExperienceFailure {
             phase = .failure(error)
         } catch {
-            experience.reporter.report(error, context: "provider switching")
+            experience.report(error, context: "provider switching")
             phase = .failure(.keyStorage)
         }
     }
@@ -151,7 +151,7 @@ final class BudgetAccessState {
             do {
                 try experience.setActiveProviderID(fallback.provider.id)
             } catch {
-                experience.reporter.report(error, context: "fallback provider selection")
+                experience.report(error, context: "fallback provider selection")
             }
             if case .needsKey(let snapshot, _) = phase { phase = .ready(snapshot) }
         } else if case .ready(let snapshot) = phase {

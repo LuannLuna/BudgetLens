@@ -52,7 +52,7 @@ final class ChatConversationState {
         } catch let error as ExperienceFailure {
             failure = error
         } catch {
-            experience.reporter.report(error, context: "chat state")
+            experience.report(error, context: "chat state")
             failure = .serviceUnavailable
         }
     }
