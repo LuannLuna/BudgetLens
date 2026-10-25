@@ -3,13 +3,6 @@ import Observation
 
 @MainActor @Observable
 final class BudgetAccessState {
-    enum Phase {
-        case loading
-        case needsKey(BudgetSnapshot, providerID: String)
-        case ready(BudgetSnapshot)
-        case failure(ExperienceFailure)
-    }
-
     private(set) var phase: Phase = .loading
     private(set) var keyRevision = 0
     private(set) var providers: [Provider] = Provider.catalog
@@ -46,11 +39,8 @@ final class BudgetAccessState {
         refreshCatalog()
         do {
             let snapshot = try experience.loadSnapshot()
-            if try experience.hasKey(providerID: activeProviderID) {
-                phase = .ready(snapshot)
-            } else {
-                phase = .needsKey(snapshot, providerID: activeProviderID)
-            }
+            let hasKey = try experience.hasKey(providerID: activeProviderID)
+            phase = hasKey ? .ready(snapshot) : .needsKey(snapshot, providerID: activeProviderID)
         } catch let error as ExperienceFailure {
             phase = .failure(error)
         } catch {
@@ -99,26 +89,17 @@ final class BudgetAccessState {
     func clearKey(providerID: String) throws {
         try experience.clearKey(providerID: providerID)
         refreshCatalog()
-        if providerID == activeProviderID {
-            keyRevision += 1
-            moveOnAfterActiveKeyRemoval()
-        }
+        if providerID == activeProviderID { moveOnAfterActiveKeyRemoval() }
     }
 
     /// Throws before changing anything, so a failed switch leaves the current screen and assistant as they were.
+    /// Switching between keyed assistants keeps the in-memory conversation.
     func setActiveProvider(_ providerID: String) throws {
         let hasKey = try experience.hasKey(providerID: providerID)
         try experience.setActiveProviderID(providerID)
         activeProviderID = providerID
         refreshCatalog()
-        if hasKey {
-            // Switching between keyed assistants keeps the in-memory conversation.
-            if case .needsKey(let snapshot, _) = phase { phase = .ready(snapshot) }
-        } else if case .ready(let snapshot) = phase {
-            phase = .needsKey(snapshot, providerID: providerID)
-        } else if case .needsKey(let snapshot, _) = phase {
-            phase = .needsKey(snapshot, providerID: providerID)
-        }
+        phase = phase.routed(hasKey: hasKey, providerID: providerID)
     }
 
     @discardableResult
@@ -132,10 +113,7 @@ final class BudgetAccessState {
         let wasActive = id == activeProviderID
         try experience.removeCustomProvider(id: id)
         refreshCatalog()
-        if wasActive {
-            keyRevision += 1
-            moveOnAfterActiveKeyRemoval()
-        }
+        if wasActive { moveOnAfterActiveKeyRemoval() }
     }
 
     private func refreshCatalog() {
@@ -153,6 +131,7 @@ final class BudgetAccessState {
     }
 
     private func moveOnAfterActiveKeyRemoval() {
+        keyRevision += 1
         let fallback = keyStates.first { $0.hasKey && $0.provider.id != activeProviderID }
         if let fallback {
             activeProviderID = fallback.provider.id
@@ -161,9 +140,7 @@ final class BudgetAccessState {
             } catch {
                 experience.report(error, context: "fallback provider selection")
             }
-            if case .needsKey(let snapshot, _) = phase { phase = .ready(snapshot) }
-        } else if case .ready(let snapshot) = phase {
-            phase = .needsKey(snapshot, providerID: activeProviderID)
         }
+        phase = phase.routed(hasKey: fallback != nil, providerID: activeProviderID)
     }
 }

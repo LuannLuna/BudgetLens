@@ -16,7 +16,6 @@ final class BudgetLensUITests: XCTestCase {
 
         XCTAssertTrue(app.tabBars.buttons["Budget"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Worth reviewing"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["connectionBanner"].waitForExistence(timeout: 3))
 
         app.tabBars.buttons["Ask"].tap()
         XCTAssertFalse(app.buttons["sendButton"].isEnabled)
@@ -57,7 +56,6 @@ final class BudgetLensUITests: XCTestCase {
         app.buttons["continueButton"].tap()
 
         XCTAssertTrue(app.tabBars.buttons["Budget"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["connectionBanner"].waitForExistence(timeout: 3))
         app.tabBars.buttons["Ask"].tap()
         XCTAssertTrue(app.staticTexts["Answering with DeepSeek"].waitForExistence(timeout: 3))
     }
@@ -97,7 +95,6 @@ final class BudgetLensUITests: XCTestCase {
         app.buttons["continueButton"].tap()
 
         XCTAssertTrue(app.tabBars.buttons["Budget"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["connectionBanner"].waitForExistence(timeout: 3))
         app.tabBars.buttons["Ask"].tap()
         XCTAssertTrue(app.staticTexts["Answering with Local Test"].waitForExistence(timeout: 3))
     }

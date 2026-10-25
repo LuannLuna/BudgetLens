@@ -1,23 +1,5 @@
 import Foundation
 
-protocol LLMResponding: Sendable {
-    func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String
-}
-
-struct ProviderMessage: Encodable, Sendable {
-    let role: String
-    let content: String
-}
-
-enum ProviderFailure: Error {
-    case invalidKey
-    case quotaOrRateLimit
-    case rejectedRequest
-    case connection
-    case unusableReply
-    case serviceUnavailable
-}
-
 struct OpenAIResponseClient: LLMResponding {
     let provider: Provider
     let session: URLSession
