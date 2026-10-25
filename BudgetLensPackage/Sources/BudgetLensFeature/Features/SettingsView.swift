@@ -3,38 +3,22 @@ import SwiftUI
 struct SettingsView: View {
     let access: BudgetAccessState
     @Environment(\.dismiss) private var dismiss
-    @State private var selection: String
     @State private var keyEditor: Provider?
     @State private var showingCustomEditor = false
     @State private var confirmingClear = false
     @State private var pendingClearProviderID: String?
     @State private var failure: ExperienceFailure?
 
-    init(access: BudgetAccessState) {
-        self.access = access
-        _selection = State(initialValue: access.activeProviderID)
-    }
-
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    Picker(String(localized: "Assistant", comment: "Active assistant selection"), selection: $selection) {
+                    Picker(String(localized: "Assistant", comment: "Active assistant selection"), selection: activeSelection) {
                         ForEach(access.providers) { provider in
                             Text(verbatim: provider.name).tag(provider.id)
                         }
                     }
                     .accessibilityIdentifier("activeAssistantPicker")
-                    .onChange(of: selection) { _, newValue in
-                        do {
-                            try access.setActiveProvider(newValue)
-                        } catch let error as ExperienceFailure {
-                            failure = error
-                        } catch {
-                            access.experience.report(error, context: "assistant switching")
-                            failure = .serviceUnavailable
-                        }
-                    }
                 } footer: {
                     Text("Switching to an assistant that already has a key keeps the current conversation. Choosing one without a key opens the key entry screen and starts a new chat once it's connected.", comment: "Assistant switching behavior note")
                 }
@@ -105,6 +89,22 @@ struct SettingsView: View {
             } message: {
                 Text("This assistant can't answer questions until you add a new key.", comment: "Confirmation for key removal")
             }
+        }
+    }
+
+    /// Reads the active assistant straight from the access state so the picker follows fallbacks made elsewhere.
+    private var activeSelection: Binding<String> {
+        Binding(get: { access.activeProviderID }, set: { selectAssistant($0) })
+    }
+
+    private func selectAssistant(_ providerID: String) {
+        do {
+            try access.setActiveProvider(providerID)
+        } catch let error as ExperienceFailure {
+            failure = error
+        } catch {
+            access.experience.report(error, context: "assistant switching")
+            failure = .serviceUnavailable
         }
     }
 

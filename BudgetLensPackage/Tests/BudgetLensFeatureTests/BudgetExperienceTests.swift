@@ -34,15 +34,15 @@ struct BudgetExperienceTests {
         }
     }
 
-    @Test func askUsesTheActiveProvider() async throws {
-        let experience = makeExperience(
-            key: "anthropic-key",
-            responder: SampleResponder(reply: "anthropic-answer"),
-            activeID: "anthropic"
-        )
+    @Test(arguments: ["openai", "anthropic", "gemini"])
+    func askUsesTheActiveProvider(_ activeID: String) async throws {
+        let keys = Dictionary(uniqueKeysWithValues: Provider.catalog.map { ($0.id, "\($0.id)-key") })
+        let experience = makeExperience(keyStore: PerProviderKeyStore(keys: keys), resolver: EchoResolver(), activeID: activeID)
         let snapshot = try experience.loadSnapshot()
+
         let reply = try await experience.ask("Question", history: [], snapshot: snapshot)
-        #expect(reply == "anthropic-answer")
+
+        #expect(reply == "\(activeID):\(activeID)-key")
     }
 
     @Test func askSendsContextThenRecentHistoryThenQuestion() async throws {
@@ -116,15 +116,16 @@ struct BudgetExperienceTests {
         key: String? = "test-only",
         keyStore: (any APIKeyStoring)? = nil,
         responder: any LLMResponding = SampleResponder(reply: "ok"),
+        resolver: (any LLMClientResolving)? = nil,
         activeID: String = "openai",
         customStore: any CustomProviderStoring = InMemoryCustomStore(),
-        activeStore: InMemoryActiveStore = InMemoryActiveStore()
+        activeStore: InMemoryActiveStore? = nil
     ) -> BudgetExperience {
         BudgetExperience(
             snapshotLoader: BundledSnapshotLoader(),
             keyStore: keyStore ?? SampleKeyStore(key: key),
-            clientResolver: SampleResolver(responder: responder),
-            activeProviderStore: activeStore,
+            clientResolver: resolver ?? SampleResolver(responder: responder),
+            activeProviderStore: activeStore ?? InMemoryActiveStore(id: activeID),
             customProviderStore: customStore,
             reporter: SilentTestReporter()
         )
@@ -142,6 +143,25 @@ private struct UnreadableKeyStore: APIKeyStoring {
     func read(providerID: String) throws -> String? { throw KeychainFailure.invalidValue }
     func save(_ key: String, providerID: String) throws {}
     func clear(providerID: String) throws {}
+}
+
+private struct PerProviderKeyStore: APIKeyStoring {
+    let keys: [String: String]
+    func read(providerID: String) throws -> String? { keys[providerID] }
+    func save(_ key: String, providerID: String) throws {}
+    func clear(providerID: String) throws {}
+}
+
+private struct EchoResolver: LLMClientResolving {
+    func client(for provider: Provider) -> any LLMResponding { EchoResponder(providerID: provider.id) }
+}
+
+private struct EchoResponder: LLMResponding {
+    let providerID: String
+
+    func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String {
+        "\(providerID):\(key)"
+    }
 }
 
 private final class InMemoryActiveStore: ActiveProviderStoring {

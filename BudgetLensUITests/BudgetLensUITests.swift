@@ -128,4 +128,36 @@ final class BudgetLensUITests: XCTestCase {
         app.buttons["continueButton"].tap()
         XCTAssertTrue(app.tabBars.buttons["Budget"].waitForExistence(timeout: 5))
     }
+
+    @MainActor
+    func testSettingsPickerFollowsFallbackAfterClearingActiveKey() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing-reset"]
+        app.launch()
+
+        let keyField = app.secureTextFields["apiKeyField"]
+        XCTAssertTrue(keyField.waitForExistence(timeout: 5))
+        keyField.tap()
+        keyField.typeText("test-only-openai-key")
+        app.buttons["continueButton"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Budget"].waitForExistence(timeout: 5))
+
+        app.buttons["Settings"].tap()
+        app.buttons["replaceKey.anthropic"].tap()
+        let replacement = app.secureTextFields["keyEditorField"]
+        XCTAssertTrue(replacement.waitForExistence(timeout: 3))
+        replacement.tap()
+        replacement.typeText("test-only-anthropic-key")
+        app.buttons["keyEditorSave"].tap()
+
+        // Clearing the active key falls back to Anthropic; the picker must show it.
+        app.buttons["clearKey.openai"].tap()
+        let confirm = app.buttons["Remove key"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3))
+        confirm.tap()
+
+        let picker = app.buttons["activeAssistantPicker"]
+        let showsAnthropic = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS 'Anthropic'"), object: picker)
+        XCTAssertEqual(XCTWaiter().wait(for: [showsAnthropic], timeout: 3), .completed)
+    }
 }
