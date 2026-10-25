@@ -10,6 +10,10 @@ struct FailureNoticeView: View {
                 Text("Add an API key for this assistant to ask questions about the snapshot.", comment: "Missing API key recovery")
             case .invalidKey(let providerName):
                 Text("\(providerName) couldn't accept that key. You can replace it in Settings and try again.", comment: "Invalid API key recovery")
+            case .quotaOrRateLimit(let providerName):
+                Text("\(providerName) says this key has reached its usage limit or has no credit left. Check your plan with them, or wait a moment and try again.", comment: "Provider quota or rate-limit recovery")
+            case .providerConfiguration(let providerName):
+                Text("\(providerName) didn't accept the request, which usually means the model name or URL is wrong. In Settings you can switch assistants or re-add a custom one.", comment: "Provider rejected the request recovery")
             case .network:
                 Text("We couldn't reach the assistant. Check your connection and try again.", comment: "Network failure recovery")
             case .unusableReply:

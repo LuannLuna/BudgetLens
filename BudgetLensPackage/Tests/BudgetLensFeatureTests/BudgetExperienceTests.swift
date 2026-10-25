@@ -6,6 +6,8 @@ import Testing
 struct BudgetExperienceTests {
     @Test(arguments: [
         (ProviderFailure.invalidKey, ExperienceFailure.invalidKey(providerName: "OpenAI")),
+        (ProviderFailure.quotaOrRateLimit, ExperienceFailure.quotaOrRateLimit(providerName: "OpenAI")),
+        (ProviderFailure.rejectedRequest, ExperienceFailure.providerConfiguration(providerName: "OpenAI")),
         (ProviderFailure.connection, ExperienceFailure.network),
         (ProviderFailure.unusableReply, ExperienceFailure.unusableReply),
         (ProviderFailure.serviceUnavailable, ExperienceFailure.serviceUnavailable)

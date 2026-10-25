@@ -197,6 +197,8 @@ struct BudgetExperience {
             reporter.report(error, context: "chat request")
             switch error {
             case ProviderFailure.invalidKey: throw ExperienceFailure.invalidKey(providerName: provider.name)
+            case ProviderFailure.quotaOrRateLimit: throw ExperienceFailure.quotaOrRateLimit(providerName: provider.name)
+            case ProviderFailure.rejectedRequest: throw ExperienceFailure.providerConfiguration(providerName: provider.name)
             case ProviderFailure.connection: throw ExperienceFailure.network
             case ProviderFailure.unusableReply: throw ExperienceFailure.unusableReply
             default: throw ExperienceFailure.serviceUnavailable

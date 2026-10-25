@@ -80,8 +80,8 @@ struct AskView: View {
                                 Task { await conversation.retry(snapshot: snapshot) }
                             }
                             .frame(minHeight: 44)
-                        } else if failure.requiresKeyFix {
-                            Button(String(localized: "Open Settings", comment: "Correct an invalid or missing API key"), systemImage: "gearshape", action: openSettings)
+                        } else if failure.needsSettings {
+                            Button(String(localized: "Open Settings", comment: "Fix a key or assistant problem"), systemImage: "gearshape", action: openSettings)
                         }
                     }
                     .padding(LayoutSpace.medium)

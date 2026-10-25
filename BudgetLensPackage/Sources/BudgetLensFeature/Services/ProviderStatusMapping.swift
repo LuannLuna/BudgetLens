@@ -2,13 +2,18 @@ import Foundation
 
 enum ProviderStatusMapping {
     static func classify(status: Int, body: Data) -> ProviderFailure? {
-        if status == 401 || status == 403 { return .invalidKey }
-        if status == 400, bodyMentionsAPIKey(body) { return .invalidKey }
-        guard (200..<300).contains(status) else { return .serviceUnavailable }
-        return nil
+        switch status {
+        case 401, 403: .invalidKey
+        case 400 where bodyMentionsAPIKey(body): .invalidKey
+        case 402, 429: .quotaOrRateLimit
+        case 400, 404, 422: .rejectedRequest
+        case 200..<300: nil
+        default: .serviceUnavailable
+        }
     }
 
     private static func bodyMentionsAPIKey(_ body: Data) -> Bool {
-        String(decoding: body.prefix(1024), as: UTF8.self).localizedCaseInsensitiveContains("api key")
+        // lowercased() is locale-independent; localizedCaseInsensitiveContains is not (e.g. Turkish "I").
+        String(decoding: body.prefix(1024), as: UTF8.self).lowercased().contains("api key")
     }
 }
