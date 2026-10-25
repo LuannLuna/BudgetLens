@@ -101,4 +101,31 @@ final class BudgetLensUITests: XCTestCase {
         app.tabBars.buttons["Ask"].tap()
         XCTAssertTrue(app.staticTexts["Answering with Local Test"].waitForExistence(timeout: 3))
     }
+
+    @MainActor
+    func testReturningToAssistantWithSavedKeyReusesIt() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing-reset"]
+        app.launch()
+
+        let keyField = app.secureTextFields["apiKeyField"]
+        XCTAssertTrue(keyField.waitForExistence(timeout: 5))
+        keyField.tap()
+        keyField.typeText("test-only-sample-key")
+        app.buttons["continueButton"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Budget"].waitForExistence(timeout: 5))
+
+        // Switching to an assistant without a key opens key entry again.
+        app.buttons["Settings"].tap()
+        app.buttons["activeAssistantPicker"].tap()
+        app.buttons["Gemini"].tap()
+        XCTAssertTrue(keyField.waitForExistence(timeout: 5))
+
+        // Picking the assistant that already has a key lets Continue work with an empty field.
+        app.buttons["providerPicker"].tap()
+        app.buttons["OpenAI"].tap()
+        XCTAssertTrue(app.buttons["continueButton"].isEnabled)
+        app.buttons["continueButton"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Budget"].waitForExistence(timeout: 5))
+    }
 }

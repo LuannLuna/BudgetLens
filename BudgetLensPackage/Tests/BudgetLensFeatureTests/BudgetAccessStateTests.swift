@@ -109,6 +109,63 @@ struct BudgetAccessStateTests {
         #expect(access.justConnectedProviderName == nil)
     }
 
+    @Test func connectingWithAnEmptyFieldReusesTheSavedKey() throws {
+        let (access, store, activeStore) = makeAccess(keys: ["anthropic": "saved"])
+        access.prepare()
+        guard case .needsKey = access.phase else {
+            Issue.record("The active assistant has no key, so entry should show")
+            return
+        }
+        #expect(access.hasKey(providerID: "anthropic"))
+        #expect(access.hasKey(providerID: "openai") == false)
+
+        try access.connect("  ", providerID: "anthropic")
+
+        #expect(store.keys["anthropic"] == "saved")
+        #expect(activeStore.id == "anthropic")
+        #expect(access.justConnectedProviderName == "Anthropic")
+        guard case .ready = access.phase else {
+            Issue.record("Reusing a saved key should open the budget")
+            return
+        }
+    }
+
+    @Test func connectingWithAnEmptyFieldNeedsASavedKey() {
+        let (access, _, _) = makeAccess()
+        access.prepare()
+
+        #expect(throws: ExperienceFailure.missingKey) { try access.connect("", providerID: "openai") }
+        guard case .needsKey = access.phase else {
+            Issue.record("A failed connect should stay on key entry")
+            return
+        }
+    }
+
+    @Test func replacingTheActiveKeyKeepsTheConversation() throws {
+        let (access, store, _) = makeAccess(keys: ["openai": "old"])
+        access.prepare()
+        let revision = access.keyRevision
+
+        try access.saveKey("new", providerID: "openai")
+
+        #expect(store.keys["openai"] == "new")
+        #expect(access.keyRevision == revision)
+        guard case .ready = access.phase else {
+            Issue.record("Replacing a key should keep the budget open")
+            return
+        }
+    }
+
+    @Test func clearingTheActiveKeyEndsTheConversation() throws {
+        let (access, _, _) = makeAccess(keys: ["openai": "a", "anthropic": "b"])
+        access.prepare()
+        let revision = access.keyRevision
+
+        try access.clearKey(providerID: "openai")
+
+        #expect(access.keyRevision == revision + 1)
+    }
+
     private func makeAccess(
         keys: [String: String] = [:],
         activeID: String = "openai"

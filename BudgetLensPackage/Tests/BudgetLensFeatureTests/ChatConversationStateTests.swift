@@ -5,14 +5,7 @@ import Testing
 struct ChatConversationStateTests {
     @Test func retryKeepsOneQuestionAndAddsTheReply() async throws {
         let responder = FlakyResponder()
-        let experience = BudgetExperience(
-            snapshotLoader: BundledSnapshotLoader(),
-            keyStore: ChatTestKeyStore(),
-            clientResolver: ChatTestResolver(responder: responder),
-            activeProviderStore: ChatTestActiveStore(),
-            customProviderStore: ChatTestCustomStore(),
-            reporter: ChatTestReporter()
-        )
+        let experience = makeExperience(responder: responder)
         let conversation = ChatConversationState(experience: experience)
         let snapshot = try experience.loadSnapshot()
 
@@ -29,6 +22,30 @@ struct ChatConversationStateTests {
         #expect(conversation.messages[1].providerID == "openai")
         #expect(await responder.requestCount == 2)
     }
+
+    @Test func failureFixedInSettingsReturnsTheQuestionToTheComposer() async throws {
+        let experience = makeExperience(responder: FailingResponder(failure: .invalidKey))
+        let conversation = ChatConversationState(experience: experience)
+        let snapshot = try experience.loadSnapshot()
+
+        conversation.draft = "Which categories are over budget?"
+        await conversation.send(snapshot: snapshot)
+
+        #expect(conversation.failure == .invalidKey(providerName: "OpenAI"))
+        #expect(conversation.messages.isEmpty)
+        #expect(conversation.draft == "Which categories are over budget?")
+    }
+
+    private func makeExperience(responder: any LLMResponding) -> BudgetExperience {
+        BudgetExperience(
+            snapshotLoader: BundledSnapshotLoader(),
+            keyStore: ChatTestKeyStore(),
+            clientResolver: ChatTestResolver(responder: responder),
+            activeProviderStore: ChatTestActiveStore(),
+            customProviderStore: ChatTestCustomStore(),
+            reporter: ChatTestReporter()
+        )
+    }
 }
 
 private actor FlakyResponder: LLMResponding {
@@ -38,6 +55,14 @@ private actor FlakyResponder: LLMResponding {
         requestCount += 1
         if requestCount == 1 { throw ProviderFailure.connection }
         return "Groceries and Dining Out are above their planned amounts."
+    }
+}
+
+private struct FailingResponder: LLMResponding {
+    let failure: ProviderFailure
+
+    func respond(key: String, instructions: String, messages: [ProviderMessage]) async throws -> String {
+        throw failure
     }
 }
 

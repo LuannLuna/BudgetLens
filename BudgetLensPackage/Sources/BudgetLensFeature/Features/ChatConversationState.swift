@@ -50,10 +50,19 @@ final class ChatConversationState {
         } catch is CancellationError {
             // Cancellation is an expected result when a request is abandoned.
         } catch let error as ExperienceFailure {
-            failure = error
+            fail(with: error)
         } catch {
             experience.report(error, context: "chat state")
-            failure = .serviceUnavailable
+            fail(with: .serviceUnavailable)
         }
+    }
+
+    /// A failure that cannot be retried in place (a key or assistant fix in Settings) hands the question back to the composer.
+    private func fail(with error: ExperienceFailure) {
+        failure = error
+        guard error.canRetryQuestion == false, let question = pendingQuestion else { return }
+        messages.removeLast()
+        pendingQuestion = nil
+        draft = [question, draft].filter { $0.isEmpty == false }.joined(separator: "\n")
     }
 }

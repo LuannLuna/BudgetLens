@@ -36,6 +36,10 @@ final class BudgetAccessState {
         return providers.first { $0.id == id }?.name
     }
 
+    func hasKey(providerID: String) -> Bool {
+        keyStates.first { $0.provider.id == providerID }?.hasKey == true
+    }
+
     func prepare() {
         guard case .loading = phase else { return }
         refreshCatalog()
@@ -59,18 +63,19 @@ final class BudgetAccessState {
         prepare()
     }
 
+    /// Replacing a key keeps the in-memory chat; clearing or removing the active assistant ends it.
     func saveKey(_ input: String, providerID: String) throws {
         try experience.saveKey(input, providerID: providerID)
         refreshCatalog()
-        if providerID == activeProviderID {
-            keyRevision += 1
-            if case .needsKey(let snapshot, _) = phase { phase = .ready(snapshot) }
-        }
+        if providerID == activeProviderID, case .needsKey(let snapshot, _) = phase { phase = .ready(snapshot) }
     }
 
-    /// Onboarding path: save the key, make the selected assistant active, and open the budget.
+    /// Onboarding path: save the key (or reuse the saved one when the field is empty), make the selected assistant active, and open the budget.
     func connect(_ input: String, providerID: String) throws {
-        try experience.saveKey(input, providerID: providerID)
+        let reusesSavedKey = input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasKey(providerID: providerID)
+        if reusesSavedKey == false {
+            try experience.saveKey(input, providerID: providerID)
+        }
         try experience.setActiveProviderID(providerID)
         activeProviderID = providerID
         justConnectedProviderName = experience.providerName(for: providerID) ?? providerID

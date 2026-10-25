@@ -37,8 +37,13 @@ struct APIKeyEntryView: View {
                         .autocorrectionDisabled()
                         .privacySensitive()
                         .accessibilityIdentifier("apiKeyField")
+                    if selectedHasKey {
+                        Text("A key for \(selectedProviderName) is already saved. Leave the field empty to use it, or enter a new key to replace it.", comment: "Key entry note when the chosen assistant already has a saved key")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     Button(String(localized: "Continue", comment: "Save key and open budget"), systemImage: "arrow.right") { connect() }
-                        .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(canContinue == false)
                         .accessibilityIdentifier("continueButton")
 
                     if let failure {
@@ -63,6 +68,14 @@ struct APIKeyEntryView: View {
 
     private var selectedProviderName: String {
         access.providerName(for: selectedProviderID) ?? selectedProviderID
+    }
+
+    private var selectedHasKey: Bool {
+        access.hasKey(providerID: selectedProviderID)
+    }
+
+    private var canContinue: Bool {
+        draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false || selectedHasKey
     }
 
     private func connect() {
