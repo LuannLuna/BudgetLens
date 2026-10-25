@@ -24,7 +24,7 @@ struct CustomProviderStoreTests {
     }
 
     private func isolatedDefaults() throws -> UserDefaults {
-        let suite = "com.example.BudgetLens.tests.\(UUID().uuidString)"
+        let suite = "com.budgetlens.BudgetLens.tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defaults.removePersistentDomain(forName: suite)
         return defaults

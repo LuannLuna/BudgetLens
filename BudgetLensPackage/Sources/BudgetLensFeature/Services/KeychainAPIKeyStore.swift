@@ -17,7 +17,7 @@ struct KeychainAPIKeyStore: APIKeyStoring {
 
     /// Follows the app's bundle id, so the Keychain namespace changes with the app identity.
     static var defaultService: String {
-        "\(Bundle.main.bundleIdentifier ?? "com.example.BudgetLens").llm-keys"
+        "\(Bundle.main.bundleIdentifier ?? "com.budgetlens.BudgetLens").llm-keys"
     }
 
     init(service: String = KeychainAPIKeyStore.defaultService) {
