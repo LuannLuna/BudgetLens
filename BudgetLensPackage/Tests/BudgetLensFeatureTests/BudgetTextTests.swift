@@ -20,8 +20,8 @@ struct BudgetTextTests {
     }
 
     @Test func periodShowsMonthAndYearInTheLocale() {
-        #expect(BudgetText.period("2025-05", locale: english) == "May 2025")
-        #expect(BudgetText.period("2025-05", locale: portuguese).localizedCaseInsensitiveContains("maio"))
+        #expect(BudgetText.period("2026-07", locale: english) == "July 2026")
+        #expect(BudgetText.period("2026-07", locale: portuguese).localizedCaseInsensitiveContains("julho"))
     }
 
     @Test func unreadablePeriodIsShownAsReceived() {

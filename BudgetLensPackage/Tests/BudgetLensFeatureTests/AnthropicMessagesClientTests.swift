@@ -4,8 +4,8 @@ import Testing
 
 struct AnthropicMessagesClientTests {
     @Test func parsesTextContentBlocks() throws {
-        let data = Data(#"{"content":[{"type":"text","text":"  Groceries and Dining Out are over budget.  "}]}"#.utf8)
-        #expect(try AnthropicMessagesClient.parseReply(data) == "Groceries and Dining Out are over budget.")
+        let data = Data(#"{"content":[{"type":"text","text":"  Food market is over budget.  "}]}"#.utf8)
+        #expect(try AnthropicMessagesClient.parseReply(data) == "Food market is over budget.")
     }
 
     @Test(arguments: [

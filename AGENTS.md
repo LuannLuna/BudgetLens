@@ -1,14 +1,14 @@
 # Agent instructions
 
-Before changing Swift code or project structure, follow this file. The BudgetLens project brief defines product scope; these instructions define implementation requirements. Do not treat examples in either source as a reason to invent missing APIs or data.
+Before changing Swift code or project structure, follow this file. The README describes the product scope; these instructions define implementation requirements. Do not treat examples in either source as a reason to invent missing APIs or data.
 
-Keep changes proportional to the BudgetLens project: a clear, working app is more valuable than an elaborate architecture or pixel-perfect styling. When a rule cannot apply, explain the exception in the README or near the code rather than silently ignoring it.
+Keep changes proportional to the app: a clear, working product is more valuable than an elaborate architecture or pixel-perfect styling. When a rule cannot apply, explain the exception in the README or near the code rather than silently ignoring it.
 
 ## Project boundaries
 
 - Build a native iOS app. Use the bundled `BudgetLensSampleJSON.json` as the budget data source; do not fetch budget data over the network.
 - Save the user's chosen LLM API key in Keychain, not `UserDefaults`, source code, or a checked-in configuration file. Support replacing or clearing it. Do not log the key, chat text, or raw financial snapshot.
-- Send only the budget context needed to answer a chat question to the selected LLM. Treat the May 2025 snapshot as historical, not live financial data. Do not assume a currency that the payload does not identify or treat category balances as available cash.
+- Send only the budget context needed to answer a chat question to the selected LLM. Treat the bundled July 2026 snapshot as historical, not live financial data. Do not assume a currency that the payload does not identify or treat category balances as available cash.
 - Make responses approachable and grounded in the supplied data. Acknowledge uncertainty; avoid invented transactions, alarming language, and prescriptive financial advice.
 - Show actionable, user-facing errors for a missing/invalid key, network failure, and empty/malformed LLM replies. Console diagnostics are not a substitute.
 - Preserve the README's required discussion of architecture, deliberate omissions, LLM context/privacy, and one open product question.
@@ -19,7 +19,7 @@ Keep changes proportional to the BudgetLens project: a clear, working app is mor
 2. Use `@State` for local view state, `@Binding` for child edits, and `@Environment` for scoped dependencies. For shared observable state on iOS 17+, use `@Observable`; if the deployment target is older, use a compatible alternative and note why. Keep state holders small and responsibility-specific (aim for fewer than 150 lines); compute derived values rather than storing duplicate state.
 3. Do not add global state singletons or broad `EnvironmentObject` dependencies. Keep navigation and routes in Features; App composes the entry point and dependencies.
 4. Prefer adaptive SwiftUI layout, built-in controls, Dynamic Type, VoiceOver-friendly labels, and system appearance. Avoid fixed screen widths or heights.
-5. Use existing design-system components and semantic color, typography, and spacing tokens. If none exist, start with system styles and a small set of semantic tokens for custom values; do not create a large design system for this exercise. Avoid hard-coded custom colors, fonts, and spacing throughout views.
+5. Use existing design-system components and semantic color, typography, and spacing tokens. If none exist, start with system styles and a small set of semantic tokens for custom values; do not create a large design system for this app. Avoid hard-coded custom colors, fonts, and spacing throughout views.
 
 ## Concurrency and Swift APIs
 
@@ -43,14 +43,14 @@ Organize code by responsibility, without creating separate packages merely to mi
 | App | App lifecycle and dependency composition | All layers |
 
 - Features must not import Services directly or know provider-specific types/errors. Expose the operation through a Domain API and map infrastructure errors to meaningful application errors.
-- Keep responsibilities independently testable. Inject dependencies at boundaries; avoid turning a small project into a multi-package framework.
+- Keep responsibilities independently testable. Inject dependencies at boundaries; avoid turning a small app into an over-engineered package framework.
 - Prefer Apple frameworks such as `URLSession` and Keychain APIs when sufficient. For any third-party dependency, put a thin adapter in Services or Domains. Features, widgets, and extensions must not import vendor modules or expose vendor types/errors.
 - Widgets and extensions, if added, should be small, isolated, mindful of memory/execution limits, and share Domain code rather than import Features.
 
 ## Names and errors
 
 - Name types for their specific job (for example, `BudgetSnapshot`, `ChatConversationState`, `LLMChatClient`, `APIKeyStore`). Avoid catch-all suffixes: `Manager`, `ViewModel`, `Coordinator`, `Helper`, `Util`, `Utilities`, `Common`, and `Base`.
-- Name new shared repositories/packages `swift-<layer-or-domain>-<object>` where that pattern applies. Do not rename this project repository to satisfy the pattern.
+- Name new shared repositories/packages `swift-<layer-or-domain>-<object>` where that pattern applies. Do not rename this repository to satisfy the pattern.
 - Give error cases enough context to distinguish invalid credentials, transport failures, decoding failures, and unusable LLM content. Never swallow a `catch` or report success after a failed operation.
 - Use the repository's `errorReport()` facility if one exists. If it does not, introduce a small, explicit reporting abstraction before calling it; do not leave an undefined `errorReport()` in code. Reporting must redact secrets and sensitive content, and must accompany—not replace—user-facing recovery guidance.
 
@@ -62,5 +62,5 @@ Organize code by responsibility, without creating separate packages merely to mi
 
 ## Shared APIs and verification
 
-- For a shared package, bump **PATCH** for internal-only changes, **MINOR** for additive public APIs, and **MAJOR** for breaking public APIs (including new protocol requirements or exhaustive enum cases). This does not require versioning the project app itself.
-- Before finishing a change, check decoding of the bundled payload, money/percentage presentation, Keychain save/read/reset, chat context, and all three required error paths. Add focused tests for logic that can be tested without a live LLM call. If a check cannot be run, state that explicitly.
+- For a shared package, bump **PATCH** for internal-only changes, **MINOR** for additive public APIs, and **MAJOR** for breaking public APIs (including new protocol requirements or exhaustive enum cases). This does not require versioning the app itself.
+- Before finishing a change, check decoding of the bundled payload, money/percentage presentation, Keychain save/read/reset, chat context, and the missing-key, network, and unusable-reply error paths. Add focused tests for logic that can be tested without a live LLM call. If a check cannot be run, state that explicitly.

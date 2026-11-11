@@ -8,12 +8,12 @@ struct BudgetSnapshotTests {
         let snapshot = try #require(envelope.data)
 
         #expect(envelope.success)
-        #expect(snapshot.period == "2025-05")
+        #expect(snapshot.period == "2026-07")
         #expect(snapshot.categoryCount == 7)
         #expect(snapshot.categories.count == 7)
-        #expect(snapshot.overBudgetCategoryCount == 2)
-        #expect(snapshot.overBudgetCategories.map(\.categoryName) == ["Groceries", "Dining Out"])
-        #expect(snapshot.totalSpentCents == 396800)
+        #expect(snapshot.overBudgetCategoryCount == 1)
+        #expect(snapshot.overBudgetCategories.map(\.categoryName) == ["Food market"])
+        #expect(snapshot.totalSpentCents == 512400)
     }
 
     @Test func categoryTypesDecodeKnownAndUnknownNames() throws {
@@ -29,10 +29,10 @@ struct BudgetSnapshotTests {
         let snapshot = try #require(JSONDecoder().decode(BudgetEnvelope.self, from: BundledSnapshotLoader().load()).data)
         let context = BudgetContext.description(for: snapshot)
 
-        #expect(context.contains("Historical budget snapshot for 2025-05"))
-        #expect(context.contains("Groceries (essential): budgeted 600.00, spent 714.00, remaining -114.00, over budget: true"))
-        #expect(context.contains("Unallocated budget (separately reported): 412.00"))
-        #expect(context.contains("unbudgeted spending (separately reported): 185.00"))
+        #expect(context.contains("Historical budget snapshot for 2026-07"))
+        #expect(context.contains("Food market (essential): budgeted 1150.00, spent 1219.00, remaining -69.00, over budget: true"))
+        #expect(context.contains("Unallocated budget (separately reported): 227.00"))
+        #expect(context.contains("unbudgeted spending (separately reported): 93.00"))
         #expect(context.contains("Currency is NOT specified"))
         #expect(context.contains("cents") == false)
         #expect(context.contains("a1b2c3d4") == false)

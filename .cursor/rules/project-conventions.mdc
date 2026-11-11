@@ -1,6 +1,6 @@
 ---
-description: BudgetLens repository conventions and project scope
+description: BudgetLens repository conventions and scope
 alwaysApply: true
 ---
 
-Read `AGENTS.md` before changing Swift code. The BudgetLens project brief defines the app's product requirements.
+Read `AGENTS.md` before changing Swift code. The README defines the app's product requirements.
